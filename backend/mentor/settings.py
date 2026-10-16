@@ -7,6 +7,7 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+PRIVATE_DIR = Path.home() / ".config" / "mentor"
 
 
 class Settings(BaseSettings):
@@ -19,6 +20,9 @@ class Settings(BaseSettings):
     config_dir: Path = REPO_ROOT / "config"
     telegram_bot_token: SecretStr | None = None
     telegram_allowed_chat_id: int | None = None
+    # Outside the repo, owner-only permissions; Secrets Manager from Phase 1.
+    google_client_secret_path: Path = PRIVATE_DIR / "google_client_secret.json"
+    google_token_path: Path = PRIVATE_DIR / "google_token.json"
 
 
 @lru_cache

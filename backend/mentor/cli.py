@@ -40,7 +40,19 @@ def main(argv: Sequence[str] | None = None) -> None:
     chat.add_argument("--new", action="store_true", help="start a fresh conversation")
     chat.add_argument("--once", metavar="TEXT", help="ask one question, print the reply, exit")
     commands.add_parser("telegram", help="run the Telegram bot")
+    commands.add_parser(
+        "google-auth", help="connect your Google account (one-time, in the browser)"
+    )
     args = parser.parse_args(argv)
+
+    if args.command == "google-auth":
+        from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError, connect_google
+
+        try:
+            print(f"Google connected. Scopes: {connect_google()}")
+        except GoogleNotConnectedError as error:
+            raise SystemExit(str(error)) from None
+        return
 
     preflight()
     if args.command == "chat":

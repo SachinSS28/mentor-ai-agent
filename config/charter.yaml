@@ -7,7 +7,7 @@ assistant:
   coaching_tone: direct        # warm but honest: flags overcommitment, slips, low-value meetings
 
 owner:
-  name: Sachin                   # from the blueprint
+  name: Sachin
   city: Hong Kong
   timezone: Asia/Hong_Kong
 
