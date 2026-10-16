@@ -25,4 +25,4 @@ def call(tool_name: str, call_id: str = "call-1", **args: Any) -> AIMessage:
 @tool
 def fake_open_tasks() -> str:
     """List open tasks."""
-    return "- Send GST working to client (due Fri 23 Oct 17:00, P1)"
+    return "- Send quarterly report to client (due Fri 23 Oct 17:00, P1)"

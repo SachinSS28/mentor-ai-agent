@@ -53,19 +53,19 @@ def test_conversation_survives_a_restart(system_prompt: Any) -> None:
     with open_checkpointer() as saver:
         ask(
             build_graph(scripted("Noted."), [], system_prompt, saver),
-            "My office is in BKC.",
+            "My office is in Central.",
             thread,
         )
 
     with open_checkpointer() as saver:  # a fresh process would reconnect the same way
-        graph = build_graph(scripted("BKC."), [], system_prompt, saver)
+        graph = build_graph(scripted("Central."), [], system_prompt, saver)
         ask(graph, "Where is my office?", thread)
         history = graph.get_state({"configurable": {"thread_id": thread}}).values["messages"]
         saver.delete_thread(thread)
 
     assert [m.text for m in history] == [
-        "My office is in BKC.",
+        "My office is in Central.",
         "Noted.",
         "Where is my office?",
-        "BKC.",
+        "Central.",
     ]

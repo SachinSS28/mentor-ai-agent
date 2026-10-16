@@ -7,7 +7,7 @@ from mentor.agent.tools import resolve_day
 from mentor.mcp_servers.google_tools.calendar import format_event, parse_event
 from mentor.mcp_servers.google_tools.gmail import EmailSummary, format_untrusted, parse_message
 
-IST = ZoneInfo("Asia/Kolkata")
+HKT = ZoneInfo("Asia/Hong_Kong")
 
 
 def test_timed_event_is_converted_to_local_time() -> None:
@@ -16,16 +16,16 @@ def test_timed_event_is_converted_to_local_time() -> None:
             "summary": "Client review",
             "start": {"dateTime": "2026-10-16T04:30:00Z"},
             "end": {"dateTime": "2026-10-16T05:30:00Z"},
-            "location": "BKC",
+            "location": "Central",
             "attendees": [{"email": "a@x.com"}, {"email": "b@x.com"}],
         },
-        IST,
+        HKT,
     )
-    assert format_event(event) == "- Fri 16 Oct 10:00–11:00: Client review — BKC, 2 attendees"
+    assert format_event(event) == "- Fri 16 Oct 12:30–13:30: Client review — Central, 2 attendees"
 
 
 def test_all_day_event_without_title() -> None:
-    event = parse_event({"start": {"date": "2026-10-20"}, "end": {"date": "2026-10-21"}}, IST)
+    event = parse_event({"start": {"date": "2026-10-20"}, "end": {"date": "2026-10-21"}}, HKT)
     assert format_event(event) == "- Tue 20 Oct (all day): (no title)"
 
 
@@ -33,17 +33,17 @@ def test_event_spanning_several_days_shows_both_dates() -> None:
     event = parse_event(
         {
             "summary": "Retreat ",
-            "start": {"dateTime": "2026-07-28T01:30:00+05:30"},
-            "end": {"dateTime": "2026-10-25T04:40:00+05:30"},
+            "start": {"dateTime": "2026-07-28T01:30:00+08:00"},
+            "end": {"dateTime": "2026-10-25T04:40:00+08:00"},
         },
-        IST,
+        HKT,
     )
     assert format_event(event) == "- Tue 28 Jul 01:30 → Sun 25 Oct 04:40: Retreat"
 
 
 def test_multi_day_all_day_event_uses_inclusive_last_day() -> None:
     event = parse_event(
-        {"summary": "Trip", "start": {"date": "2026-11-02"}, "end": {"date": "2026-11-05"}}, IST
+        {"summary": "Trip", "start": {"date": "2026-11-02"}, "end": {"date": "2026-11-05"}}, HKT
     )
     assert format_event(event) == "- Mon 02 Nov → Wed 04 Nov (all day): Trip"
 
@@ -52,10 +52,10 @@ def test_email_headers_are_read_case_insensitively() -> None:
     message = {
         "snippet": "Please find attached",
         "payload": {
-            "headers": [{"name": "FROM", "value": "Ravi"}, {"name": "subject", "value": "GST"}]
+            "headers": [{"name": "FROM", "value": "Ravi"}, {"name": "subject", "value": "Invoice"}]
         },
     }
-    assert parse_message(message) == EmailSummary("Ravi", "GST", "", "Please find attached")
+    assert parse_message(message) == EmailSummary("Ravi", "Invoice", "", "Please find attached")
 
 
 def test_email_content_is_wrapped_as_untrusted_data() -> None:
@@ -75,4 +75,4 @@ def test_email_content_is_wrapped_as_untrusted_data() -> None:
     ],
 )
 def test_resolve_day(value: str, expected: date) -> None:
-    assert resolve_day(value, datetime(2026, 10, 16, tzinfo=IST).date()) == expected
+    assert resolve_day(value, datetime(2026, 10, 16, tzinfo=HKT).date()) == expected

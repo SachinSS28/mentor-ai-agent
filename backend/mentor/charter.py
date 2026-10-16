@@ -20,7 +20,7 @@ class AssistantConfig(BaseModel):
 class OwnerConfig(BaseModel):
     name: str
     city: str
-    timezone: str = "Asia/Kolkata"
+    timezone: str = "Asia/Hong_Kong"
 
 
 class Charter(BaseModel):

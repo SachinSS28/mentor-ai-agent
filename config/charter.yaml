@@ -19,7 +19,7 @@ working_hours:
   end: null                    # e.g. "19:00"
   deep_work: null              # your best focus window, e.g. "09:30-12:00"
 
-daily_rhythm:                  # 24-hour times, IST
+daily_rhythm:                  # 24-hour times, Hong Kong time
   morning_checkin: "06:30"
   morning_brief: "07:00"
   midday_check: "13:00"
