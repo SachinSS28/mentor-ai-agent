@@ -10,6 +10,8 @@ owner:
   name: Sachin
   city: Hong Kong
   timezone: Asia/Hong_Kong
+  coverage: [hong_kong, mumbai, mainland_china]   # local and travel features
+  currency: HKD
 
 working_hours:
   days: []                     # e.g. [mon, tue, wed, thu, fri, sat]
@@ -51,7 +53,7 @@ places: []
 #    buffer_minutes: 15
 
 budget:
-  monthly_cap_inr: 8000        # all-in: AWS + AI models
+  monthly_cap_hkd: 500         # all-in: AWS + AI models (about US$64)
   alert_at: [0.5, 0.8, 1.0]
   at_cap: downgrade_to_cheapest_model_and_block_non_essential
 
