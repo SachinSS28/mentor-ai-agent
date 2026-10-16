@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RunLocalContainersAsTheirCloudRoles",
+      "Effect": "Allow",
+      "Action": [
+        "sts:AssumeRole",
+        "sts:TagSession"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT_ID:role/mentor-agent-task",
+        "arn:aws:iam::ACCOUNT_ID:role/mentor-sentinel-task",
+        "arn:aws:iam::ACCOUNT_ID:role/mentor-worker-task"
+      ]
+    }
+  ]
+}

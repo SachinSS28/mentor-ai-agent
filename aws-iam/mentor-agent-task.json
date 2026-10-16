@@ -1,0 +1,109 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "InvokeGpt56ViaIndiaProfile",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-terra",
+        "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-luna"
+      ]
+    },
+    {
+      "Sid": "Gpt56ModelsOnlyThroughIndiaProfile",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:ap-south-1::foundation-model/openai.gpt-5.6-*",
+        "arn:aws:bedrock:ap-south-2::foundation-model/openai.gpt-5.6-*"
+      ],
+      "Condition": {
+        "StringLike": {
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-*"
+        }
+      }
+    },
+    {
+      "Sid": "InvokeBulkAndEmbeddingModelsInMumbai",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:ap-south-1::foundation-model/openai.gpt-oss-120b-1:0",
+        "arn:aws:bedrock:ap-south-1::foundation-model/cohere.embed-multilingual-v3"
+      ]
+    },
+    {
+      "Sid": "OptionalG5TranscribeVoiceNotes",
+      "Effect": "Allow",
+      "Action": [
+        "transcribe:StartStreamTranscription",
+        "transcribe:StartStreamTranscriptionWebSocket"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-south-1"
+        }
+      }
+    },
+    {
+      "Sid": "ConnectToCache",
+      "Effect": "Allow",
+      "Action": "elasticache:Connect",
+      "Resource": [
+        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:serverlesscache:mentor-cache",
+        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:user:mentor-app"
+      ]
+    },
+    {
+      "Sid": "PublishMentorMetrics",
+      "Effect": "Allow",
+      "Action": "cloudwatch:PutMetricData",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "Mentor"
+        }
+      }
+    },
+    {
+      "Sid": "OptionalG6Tracing",
+      "Effect": "Allow",
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "NeverReadConnectorCredentials",
+      "Effect": "Deny",
+      "Action": "secretsmanager:*",
+      "Resource": "arn:aws:secretsmanager:ap-south-1:ACCOUNT_ID:secret:mentor/connectors/*"
+    },
+    {
+      "Sid": "KeepBedrockInIndia",
+      "Effect": "Deny",
+      "Action": "bedrock:*",
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": [
+            "ap-south-1",
+            "ap-south-2"
+          ]
+        }
+      }
+    }
+  ]
+}

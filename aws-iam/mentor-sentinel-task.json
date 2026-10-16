@@ -1,0 +1,115 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadConnectorCredentials",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "arn:aws:secretsmanager:ap-south-1:ACCOUNT_ID:secret:mentor/connectors/*"
+    },
+    {
+      "Sid": "SaveRefreshedGoogleTokens",
+      "Effect": "Allow",
+      "Action": "secretsmanager:PutSecretValue",
+      "Resource": "arn:aws:secretsmanager:ap-south-1:ACCOUNT_ID:secret:mentor/connectors/google-oauth-*"
+    },
+    {
+      "Sid": "UseMentorKeyForSecretsAndFiles",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ],
+      "Resource": "arn:aws:kms:ap-south-1:ACCOUNT_ID:key/KMS_KEY_ID",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": [
+            "secretsmanager.ap-south-1.amazonaws.com",
+            "s3.ap-south-1.amazonaws.com"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "IntentCheckWithLuna",
+      "Effect": "Allow",
+      "Action": "bedrock:InvokeModel",
+      "Resource": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-luna"
+    },
+    {
+      "Sid": "LunaModelOnlyThroughIndiaProfile",
+      "Effect": "Allow",
+      "Action": "bedrock:InvokeModel",
+      "Resource": [
+        "arn:aws:bedrock:ap-south-1::foundation-model/openai.gpt-5.6-luna*",
+        "arn:aws:bedrock:ap-south-2::foundation-model/openai.gpt-5.6-luna*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-luna"
+        }
+      }
+    },
+    {
+      "Sid": "TripPacksAndReceipts",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::mentor-files-ACCOUNT_ID/trip-packs/*",
+        "arn:aws:s3:::mentor-files-ACCOUNT_ID/receipts/*"
+      ]
+    },
+    {
+      "Sid": "ListOnlyMentorPrefixes",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::mentor-files-ACCOUNT_ID",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "trip-packs/*",
+            "receipts/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "OptionalG9ReceiptOcr",
+      "Effect": "Allow",
+      "Action": "textract:AnalyzeExpense",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-south-1"
+        }
+      }
+    },
+    {
+      "Sid": "ConnectToCache",
+      "Effect": "Allow",
+      "Action": "elasticache:Connect",
+      "Resource": [
+        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:serverlesscache:mentor-cache",
+        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:user:mentor-app"
+      ]
+    },
+    {
+      "Sid": "PublishMentorMetrics",
+      "Effect": "Allow",
+      "Action": "cloudwatch:PutMetricData",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "Mentor"
+        }
+      }
+    }
+  ]
+}

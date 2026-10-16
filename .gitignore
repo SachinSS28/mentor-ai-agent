@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Secrets and local settings: never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+client_secret*.json
+credentials*.json
+token*.json
+
+# Rendered IAM policies (contain the account ID)
+aws-iam/rendered/
+
+# Terraform (terraform.tfvars and .terraform.lock.hcl ARE committed; they hold no secrets)
+.terraform/
+*.tfstate
+*.tfstate.*
+tfplan
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local data and meeting audio (audio never leaves the Mac)
+*.sqlite
+*.db
+recordings/
+
+# macOS, editors, Xcode
+.DS_Store
+.idea/
+.vscode/
+xcuserdata/
+DerivedData/
+*.xcuserstate
