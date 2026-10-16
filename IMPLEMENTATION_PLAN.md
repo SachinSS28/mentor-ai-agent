@@ -2,7 +2,7 @@
 
 Based on `MENTOR_AI_Agent_Plan.md` (blueprint v1.0, 15 Oct 2026). This file is the canonical plan. Every major decision is confirmed with you before it's built.
 
-**Status (16 Oct 2026):** Phase 0 started. AWS access will come later, so steps **0.3, 0.3b and 0.4** (and the Bedrock part of 0.9) wait for it. Done so far: AWS CLI installed; `aws-iam/` policies + `setup_aws.sh` prepared and tested offline; **0.1 done** (git on `main`, `backend/mentor` package skeleton, uv + Python 3.13, ruff/mypy strict/pytest/pre-commit with secret checks, all passing; pushed to private repo `SachinSS28/mentor-ai-agent`). Installed: GitHub CLI, OrbStack, Ollama (Gemma 4 E4B download in progress). **0.2** charter interview in progress.
+**Status (16 Oct 2026):** Phase 0 started. AWS access will come later, so steps **0.3, 0.3b and 0.4** (and the Bedrock part of 0.9) wait for it. Done so far: AWS CLI installed; `aws-iam/` policies + `setup_aws.sh` prepared and tested offline; **0.1 done** (git on `main`, `backend/mentor` package skeleton, uv + Python 3.13, ruff/mypy strict/pytest/pre-commit with secret checks, all passing; pushed to private repo `SachinSS28/mentor-ai-agent`). Installed: GitHub CLI, OrbStack, Ollama + Gemma 4 E4B (tested: about 50 tokens/sec on the M5 Pro). **0.2** charter drafted in `config/charter.yaml` (language, tone, rhythm, ₹8,000 budget, approvals); workspaces, goals, working hours, routines and places still need your answers. **0.8 database done**: local Postgres 17 + pgvector in Docker (OrbStack), 14-table schema with an Alembic migration, unit + integration tests passing; api/worker/sentinel containers are added as they're built. **0.9 done (local model)**: `uv run mentor chat` talks to a LangGraph agent on Gemma 4 E4B with Postgres-backed conversation memory and a read-only open-tasks tool (calendar tool waits for step 0.5); Telegram bot built with chat-ID allow-list and pairing, waiting for your bot token. Finding: Gemma 4 returns empty answers after tool calls if thinking is switched off, so roles keep the model's default.
 
 ---
 
@@ -19,7 +19,7 @@ The project folder holds only the blueprint (no code, no git repo yet). The dev 
 | # | Decision | Choice | Change from blueprint |
 |---|---|---|---|
 | D1 | Plan depth | All 6 phases planned at equal depth | — |
-| D2 | Hosting | Mac + Docker Compose in Weeks 1–3, then **AWS Mumbai managed services** (ECS Fargate + RDS Postgres/pgvector + ElastiCache) | VPS → managed AWS |
+| D2 | Hosting | Mac + Docker Compose in Weeks 1–3, then **AWS Mumbai managed services** (ECS Fargate + RDS Postgres/pgvector), **sized lean** to fit the budget; final fit decided at G7 | VPS → managed AWS |
 | D3 | Tasks | **Mentor Postgres is the source of truth**; a Notion Tasks database mirrors it with two-way sync | Notion *or* Todoist → DB + Notion |
 | D4 | Agent framework | **LangGraph (Python)** + a config-driven model router | Claude Agent SDK → LangGraph |
 | D5 | Models | **Bedrock only, processing kept in India**: GPT-5.6 **Terra** (orchestrator/planning), GPT-5.6 **Luna** (fast/cheap), gpt-oss-120b for bulk work if available in Mumbai. **No SageMaker** | Claude → OpenAI-on-Bedrock |
@@ -32,6 +32,8 @@ The project folder holds only the blueprint (no code, no git repo yet). The dev 
 | D12 | Local containers | **OrbStack** (drop-in `docker` / `docker compose`) | — |
 | D13 | Model until AWS access | **Gemma 4 E4B via Ollama** on the Mac behind the model router; switches to Bedrock with one change in `config/models.yaml` | temporary |
 | D14 | Charter (0.2) | Filled in through a **chat interview**, then written to `config/charter.yaml` for your review | — |
+| D15 | Queue, locks, rate limits | **Postgres only** (no Redis/ElastiCache): APScheduler job store, advisory locks, LangGraph checkpoints all in one database | removes ElastiCache |
+| D16 | Budget | **₹8,000/month all-in** (AWS + models), enforced by Sentinel and AWS Budgets. Lean AWS sizing (smallest RDS, Fargate Spot for the worker, no NAT/ALB until Phase 5); if Infracost at G7 still exceeds the cap, fall back to one EC2 box + Docker Compose | tighter than the plan's estimate |
 
 ---
 
@@ -66,8 +68,8 @@ The project folder holds only the blueprint (no code, no git repo yet). The dev 
            |                agent (LangGraph orchestrator + subgraphs)|
            |                sentinel (MCP gateway, policy, approvals, |
            |                          audit, Secrets Manager client)  |
-           |  RDS Postgres + pgvector (data, LangGraph checkpoints)   |
-           |  ElastiCache (queue/locks)  |  S3 (trip packs, receipts) |
+           |  RDS Postgres + pgvector (data, checkpoints, job queue,  |
+           |  locks)                     |  S3 (trip packs, receipts) |
            +--------------------------+-------------------------------+
                                       | every tool call goes through Sentinel
         mentor-core MCP (own) | google-tools MCP (own) | Maps | Weather | Notion
@@ -98,7 +100,7 @@ mentor/
     docker-compose.yml        # local stack on the Mac (Weeks 1–3, and dev afterwards)
     terraform/
       bootstrap/              # S3 state bucket (local state, run once)
-      modules/                # network, data (RDS, ElastiCache, S3), iam, secrets, ecs (cluster, ECR,
+      modules/                # network, data (RDS, S3), iam, secrets, ecs (cluster, ECR,
                               # services), observability (CloudWatch, Budgets), edge (Phase 5), github_oidc (Phase 6)
       envs/prod/              # main.tf, variables.tf, backend.tf, terraform.tfvars (no secrets)
       policies/               # the IAM JSON from aws-iam/, rendered with templatefile()
@@ -129,7 +131,7 @@ mentor/
 | 0.5 | **Google Cloud project**: enable Calendar, Gmail, Drive, Sheets, Routes and Maps Grounding Lite. Set up the OAuth client and consent screen, and handle the "Testing mode = 7-day refresh token" issue (publish as an unverified production app limited to your own account) | OAuth works without weekly re-login |
 | 0.6 | **Notion**: internal integration; Tasks database (Title, Status, Due, Priority, Workspace, Source, Mentor ID, Last synced) | Database shared with the integration |
 | 0.7 | **Telegram**: create the bot in BotFather, capture your chat ID, allow-list only that ID | Bot token in Secrets Manager (G2) |
-| 0.8 | **Local stack**: OrbStack (or Docker Desktop); `docker-compose.yml` with Postgres + pgvector, Redis, api, worker, sentinel, Langfuse (dev). Alembic initial migration with the Appendix C tables plus `workspaces`, `notion_sync`, `llm_usage` | `docker compose up` works |
+| 0.8 | **Local stack**: OrbStack (or Docker Desktop); `docker-compose.yml` with Postgres + pgvector (no Redis, D15); api, worker and sentinel are added as they're built; Langfuse after G6. Alembic initial migration with the Appendix C tables plus `workspaces`, `notion_sync`, `llm_usage` | `docker compose up` works |
 | 0.9 | **Hello-world agent**: a LangGraph graph (Terra) with a Postgres checkpointer and one read-only tool (`calendar.list_events`); Telegram polling → graph → reply | You can chat with Mentor |
 | 0.10 | **Local AI feel-test**: install Ollama + Gemma 4 E4B on the Mac (also try the 26B MoE; 24 GB RAM is tight). On the iPhone, try Apple Intelligence and an MLX-based local-model app | Notes for Phases 2 and 5 |
 
@@ -160,7 +162,7 @@ mentor/
 | 1.10 | **Task capture**: text and Telegram voice notes (STT per G5) → Luna extracts title, due date, priority and workspace → task created (T1 + notify) → optional calendar block proposal |
 | 1.11 | **Notion two-way sync**: outbox table pushes DB changes to Notion; Notion edits are pulled every 3 minutes (or via webhooks) using `last_edited_time`; per-field last-write-wins; a `sync_version` prevents echo loops; nightly full reconcile |
 | 1.12 | **Commands**: `/brief /today /tasks /pause /resume /memory /forget /audit` |
-| 1.13 | **AWS go-live with Terraform** (G7, target **Wed 4 Nov**): Terraform modules for `network` (VPC, **no NAT Gateway**; public subnets with locked-down security groups or VPC endpoints), `data` (RDS Postgres + pgvector: small Graviton, single-AZ, encrypted, 7-day backups, RDS-managed password; ElastiCache Serverless; S3 `mentor-files` bucket), `ecs` (ECR repos, cluster, Fargate services agent+api, worker, sentinel internal-only via Service Connect), `observability` (CloudWatch log groups, alarms). `terraform plan` + Infracost → **G7 cost sign-off** → `terraform apply` from the Mac (CI comes in Phase 6). Container images are built locally and pushed to ECR with a `make deploy` script |
+| 1.13 | **AWS go-live with Terraform** (G7, target **Wed 4 Nov**): Terraform modules for `network` (VPC, **no NAT Gateway**; public subnets with locked-down security groups or VPC endpoints), `data` (RDS Postgres + pgvector: small Graviton, single-AZ, encrypted, 7-day backups, RDS-managed password; S3 `mentor-files` bucket), `ecs` (ECR repos, cluster, Fargate services agent+api, worker, sentinel internal-only via Service Connect), `observability` (CloudWatch log groups, alarms). `terraform plan` + Infracost → **G7 cost sign-off** → `terraform apply` from the Mac (CI comes in Phase 6). Container images are built locally and pushed to ECR with a `make deploy` script |
 
 **Acceptance:** tasks captured from voice notes; Notion edits round-trip within 5 minutes; **zero T2 actions without approval** (shown by the audit log and automated tests); **7 on-time morning briefs in a row from AWS**. That streak starts 4 Nov and finishes during Week 4, overlapping Phase 2.
 
@@ -255,7 +257,7 @@ mentor/
 
 | Item | Estimate |
 |---|---|
-| AWS managed stack, Phases 1–4 (Fargate ×3 small tasks, RDS small, ElastiCache Serverless, Secrets, CloudWatch; **no NAT, no ALB**) | roughly US$60–110 |
+| AWS managed stack, Phases 1–4 (Fargate ×3 small tasks, smallest RDS, Secrets, CloudWatch; **no NAT, no ALB, no ElastiCache**) | roughly US$50–90; must fit the ₹8,000 all-in cap with models (checked at G7) |
 | + ALB/API Gateway + domain from Phase 5 | +US$5–25 |
 | Bedrock tokens (Terra/Luna/gpt-oss) | measured in the Phase 0 spike; enforced by the Sentinel cap |
 | Apple Developer Program | US$99/year (Phase 5) |
@@ -284,15 +286,15 @@ mentor/
 
 **Naming conventions these policies assume**
 - Secrets: `mentor/app/*` are injected into containers at start (DB user per service, Telegram token, APNs key). `mentor/connectors/*` are fetched at runtime by Sentinel only (Google OAuth, Notion, Maps, search keys).
-- S3 bucket `mentor-files-ACCOUNT_ID` (prefixes `trip-packs/`, `receipts/`); ECR repos `mentor/*`; log groups `/mentor/*`; ElastiCache Serverless cache `mentor-cache` with IAM user `mentor-app`.
+- S3 bucket `mentor-files-ACCOUNT_ID` (prefixes `trip-packs/`, `receipts/`); ECR repos `mentor/*`; log groups `/mentor/*`.
 - Separate Postgres users per service: the agent's user can reach only the LangGraph checkpoint schema; mentor-core (inside Sentinel) owns the app tables.
 
 | Role | Used by | Can | Explicitly cannot |
 |---|---|---|---|
 | `mentor-ecs-execution` | ECS itself, at container start | pull images, write logs, inject `mentor/app/*` | anything at runtime |
-| `mentor-agent-task` | agent + api + Telegram bot | Bedrock (Terra, Luna, gpt-oss, embeddings), Transcribe streaming (G5), cache, metrics | **any `mentor/connectors/*` secret**; Bedrock outside India |
+| `mentor-agent-task` | agent + api + Telegram bot | Bedrock (Terra, Luna, gpt-oss, embeddings), Transcribe streaming (G5), metrics | **any `mentor/connectors/*` secret**; Bedrock outside India |
 | `mentor-sentinel-task` | Sentinel + its MCP servers | read connector secrets, save refreshed Google tokens, Luna intent check, S3 trip packs/receipts, Textract (G9) | — |
-| `mentor-worker-task` | scheduler, briefs, Notion sync | Bedrock (same as agent), Notion secret only, cache, metrics | Bedrock outside India |
+| `mentor-worker-task` | scheduler, briefs, Notion sync | Bedrock (same as agent), Notion secret only, metrics | Bedrock outside India |
 | `MentorDeveloper` (Identity Center permission set) | you on the Mac, Weeks 1–3 | assume the three task roles, so local containers run with their cloud permissions | — |
 
 ### A1. `mentor-ecs-execution`
@@ -338,7 +340,10 @@ mentor/
     {
       "Sid": "InvokeGpt56ViaIndiaProfile",
       "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
       "Resource": [
         "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-terra",
         "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-luna"
@@ -347,19 +352,27 @@ mentor/
     {
       "Sid": "Gpt56ModelsOnlyThroughIndiaProfile",
       "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
       "Resource": [
         "arn:aws:bedrock:ap-south-1::foundation-model/openai.gpt-5.6-*",
         "arn:aws:bedrock:ap-south-2::foundation-model/openai.gpt-5.6-*"
       ],
       "Condition": {
-        "StringLike": { "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-*" }
+        "StringLike": {
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-*"
+        }
       }
     },
     {
       "Sid": "InvokeBulkAndEmbeddingModelsInMumbai",
       "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
       "Resource": [
         "arn:aws:bedrock:ap-south-1::foundation-model/openai.gpt-oss-120b-1:0",
         "arn:aws:bedrock:ap-south-1::foundation-model/cohere.embed-multilingual-v3"
@@ -368,30 +381,35 @@ mentor/
     {
       "Sid": "OptionalG5TranscribeVoiceNotes",
       "Effect": "Allow",
-      "Action": ["transcribe:StartStreamTranscription", "transcribe:StartStreamTranscriptionWebSocket"],
+      "Action": [
+        "transcribe:StartStreamTranscription",
+        "transcribe:StartStreamTranscriptionWebSocket"
+      ],
       "Resource": "*",
-      "Condition": { "StringEquals": { "aws:RequestedRegion": "ap-south-1" } }
-    },
-    {
-      "Sid": "ConnectToCache",
-      "Effect": "Allow",
-      "Action": "elasticache:Connect",
-      "Resource": [
-        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:serverlesscache:mentor-cache",
-        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:user:mentor-app"
-      ]
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-south-1"
+        }
+      }
     },
     {
       "Sid": "PublishMentorMetrics",
       "Effect": "Allow",
       "Action": "cloudwatch:PutMetricData",
       "Resource": "*",
-      "Condition": { "StringEquals": { "cloudwatch:namespace": "Mentor" } }
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "Mentor"
+        }
+      }
     },
     {
       "Sid": "OptionalG6Tracing",
       "Effect": "Allow",
-      "Action": ["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+      ],
       "Resource": "*"
     },
     {
@@ -405,7 +423,14 @@ mentor/
       "Effect": "Deny",
       "Action": "bedrock:*",
       "Resource": "*",
-      "Condition": { "StringNotEquals": { "aws:RequestedRegion": ["ap-south-1", "ap-south-2"] } }
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": [
+            "ap-south-1",
+            "ap-south-2"
+          ]
+        }
+      }
     }
   ]
 }
@@ -419,7 +444,10 @@ mentor/
     {
       "Sid": "ReadConnectorCredentials",
       "Effect": "Allow",
-      "Action": ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
       "Resource": "arn:aws:secretsmanager:ap-south-1:ACCOUNT_ID:secret:mentor/connectors/*"
     },
     {
@@ -431,10 +459,18 @@ mentor/
     {
       "Sid": "UseMentorKeyForSecretsAndFiles",
       "Effect": "Allow",
-      "Action": ["kms:Decrypt", "kms:GenerateDataKey"],
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ],
       "Resource": "arn:aws:kms:ap-south-1:ACCOUNT_ID:key/KMS_KEY_ID",
       "Condition": {
-        "StringEquals": { "kms:ViaService": ["secretsmanager.ap-south-1.amazonaws.com", "s3.ap-south-1.amazonaws.com"] }
+        "StringEquals": {
+          "kms:ViaService": [
+            "secretsmanager.ap-south-1.amazonaws.com",
+            "s3.ap-south-1.amazonaws.com"
+          ]
+        }
       }
     },
     {
@@ -452,13 +488,19 @@ mentor/
         "arn:aws:bedrock:ap-south-2::foundation-model/openai.gpt-5.6-luna*"
       ],
       "Condition": {
-        "StringEquals": { "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-luna" }
+        "StringEquals": {
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-luna"
+        }
       }
     },
     {
       "Sid": "TripPacksAndReceipts",
       "Effect": "Allow",
-      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
       "Resource": [
         "arn:aws:s3:::mentor-files-ACCOUNT_ID/trip-packs/*",
         "arn:aws:s3:::mentor-files-ACCOUNT_ID/receipts/*"
@@ -469,30 +511,36 @@ mentor/
       "Effect": "Allow",
       "Action": "s3:ListBucket",
       "Resource": "arn:aws:s3:::mentor-files-ACCOUNT_ID",
-      "Condition": { "StringLike": { "s3:prefix": ["trip-packs/*", "receipts/*"] } }
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "trip-packs/*",
+            "receipts/*"
+          ]
+        }
+      }
     },
     {
       "Sid": "OptionalG9ReceiptOcr",
       "Effect": "Allow",
       "Action": "textract:AnalyzeExpense",
       "Resource": "*",
-      "Condition": { "StringEquals": { "aws:RequestedRegion": "ap-south-1" } }
-    },
-    {
-      "Sid": "ConnectToCache",
-      "Effect": "Allow",
-      "Action": "elasticache:Connect",
-      "Resource": [
-        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:serverlesscache:mentor-cache",
-        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:user:mentor-app"
-      ]
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "ap-south-1"
+        }
+      }
     },
     {
       "Sid": "PublishMentorMetrics",
       "Effect": "Allow",
       "Action": "cloudwatch:PutMetricData",
       "Resource": "*",
-      "Condition": { "StringEquals": { "cloudwatch:namespace": "Mentor" } }
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "Mentor"
+        }
+      }
     }
   ]
 }
@@ -506,7 +554,10 @@ mentor/
     {
       "Sid": "InvokeGpt56ViaIndiaProfile",
       "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
       "Resource": [
         "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-terra",
         "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-luna"
@@ -515,19 +566,27 @@ mentor/
     {
       "Sid": "Gpt56ModelsOnlyThroughIndiaProfile",
       "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
       "Resource": [
         "arn:aws:bedrock:ap-south-1::foundation-model/openai.gpt-5.6-*",
         "arn:aws:bedrock:ap-south-2::foundation-model/openai.gpt-5.6-*"
       ],
       "Condition": {
-        "StringLike": { "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-*" }
+        "StringLike": {
+          "bedrock:InferenceProfileArn": "arn:aws:bedrock:ap-south-1:ACCOUNT_ID:inference-profile/in.openai.gpt-5.6-*"
+        }
       }
     },
     {
       "Sid": "InvokeBulkAndEmbeddingModelsInMumbai",
       "Effect": "Allow",
-      "Action": ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
       "Resource": [
         "arn:aws:bedrock:ap-south-1::foundation-model/openai.gpt-oss-120b-1:0",
         "arn:aws:bedrock:ap-south-1::foundation-model/cohere.embed-multilingual-v3"
@@ -536,7 +595,10 @@ mentor/
     {
       "Sid": "ReadNotionTokenForSync",
       "Effect": "Allow",
-      "Action": ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
       "Resource": "arn:aws:secretsmanager:ap-south-1:ACCOUNT_ID:secret:mentor/connectors/notion-*"
     },
     {
@@ -544,30 +606,36 @@ mentor/
       "Effect": "Allow",
       "Action": "kms:Decrypt",
       "Resource": "arn:aws:kms:ap-south-1:ACCOUNT_ID:key/KMS_KEY_ID",
-      "Condition": { "StringEquals": { "kms:ViaService": "secretsmanager.ap-south-1.amazonaws.com" } }
-    },
-    {
-      "Sid": "ConnectToCache",
-      "Effect": "Allow",
-      "Action": "elasticache:Connect",
-      "Resource": [
-        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:serverlesscache:mentor-cache",
-        "arn:aws:elasticache:ap-south-1:ACCOUNT_ID:user:mentor-app"
-      ]
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": "secretsmanager.ap-south-1.amazonaws.com"
+        }
+      }
     },
     {
       "Sid": "PublishMentorMetrics",
       "Effect": "Allow",
       "Action": "cloudwatch:PutMetricData",
       "Resource": "*",
-      "Condition": { "StringEquals": { "cloudwatch:namespace": "Mentor" } }
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "Mentor"
+        }
+      }
     },
     {
       "Sid": "KeepBedrockInIndia",
       "Effect": "Deny",
       "Action": "bedrock:*",
       "Resource": "*",
-      "Condition": { "StringNotEquals": { "aws:RequestedRegion": ["ap-south-1", "ap-south-2"] } }
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": [
+            "ap-south-1",
+            "ap-south-2"
+          ]
+        }
+      }
     }
   ]
 }

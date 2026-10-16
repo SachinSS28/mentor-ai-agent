@@ -1,0 +1,10 @@
+# Which model plays each role (plan D5, D13).
+# Until AWS access is ready, every role runs on Gemma 4 E4B via Ollama on the Mac.
+# Switching a role to Bedrock (step 0.4) is a change in this file only.
+providers:
+  ollama:
+    base_url: http://127.0.0.1:11434
+
+roles:
+  orchestrator: { provider: ollama, model: "gemma4:e4b", temperature: 0.3 }
+  fast: { provider: ollama, model: "gemma4:e4b", temperature: 0 }

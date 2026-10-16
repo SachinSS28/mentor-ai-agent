@@ -10,6 +10,18 @@ A personal AI chief of staff and coach: daily brief, routines, tasks, meetings, 
 
 ```sh
 uv sync                     # Python 3.13 + dev tools
+docker compose -f infra/docker-compose.yml up -d   # local Postgres + pgvector (OrbStack)
+uv run alembic upgrade head # create or upgrade the database tables
 uv run pre-commit install   # lint, type-check and secret checks on every commit
 uv run pytest
+```
+
+## Talk to Mentor
+
+Needs the local database (above) and Ollama running with Gemma 4 (`ollama serve`).
+
+```sh
+uv run mentor chat            # terminal chat; the conversation is remembered between runs
+uv run mentor chat --new      # start a fresh conversation
+uv run mentor telegram        # Telegram bot; needs MENTOR_TELEGRAM_BOT_TOKEN in .env (see .env.example)
 ```

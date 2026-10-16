@@ -1,0 +1,25 @@
+# Local stack on the Mac (OrbStack). Ports bind to localhost only.
+# Postgres also serves as the job queue, lock store and LangGraph checkpointer (no Redis).
+# api, worker and sentinel services are added here as they're built.
+name: mentor
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mentor
+      POSTGRES_USER: mentor
+      POSTGRES_PASSWORD: mentor-local-only # local dev only; AWS uses an RDS-managed secret
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentor -d mentor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
