@@ -5,7 +5,7 @@ it replies to private messages with the sender's chat ID so you can add yours, a
 """
 
 import asyncio
-from typing import Literal
+from typing import Any, Literal
 
 from telegram import Update
 from telegram.constants import ChatAction
@@ -60,9 +60,17 @@ def run_telegram_bot() -> None:
     settings = get_settings()
     if settings.telegram_bot_token is None:
         raise SystemExit("MENTOR_TELEGRAM_BOT_TOKEN is not set in .env (see .env.example).")
+    status = settings.telegram_allowed_chat_id or "not set yet (pairing mode)"
+
+    async def announce(app: Application[Any, Any, Any, Any, Any, Any]) -> None:
+        print(
+            f"Mentor is listening on Telegram as @{app.bot.username}. "
+            f"Allowed chat: {status}. Ctrl+C stops it.",
+            flush=True,
+        )
+
     with open_agent() as graph:
-        app = Application.builder().token(settings.telegram_bot_token.get_secret_value()).build()
+        token = settings.telegram_bot_token.get_secret_value()
+        app = Application.builder().token(token).post_init(announce).build()
         app.add_handler(make_handler(graph, settings.telegram_allowed_chat_id))
-        status = settings.telegram_allowed_chat_id or "not set yet (pairing mode)"
-        print(f"Mentor is listening on Telegram. Allowed chat: {status}. Ctrl+C stops it.")
         app.run_polling(allowed_updates=Update.ALL_TYPES)

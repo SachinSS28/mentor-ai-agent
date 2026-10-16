@@ -10,8 +10,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
+    # Empty values in .env (e.g. `MENTOR_TELEGRAM_ALLOWED_CHAT_ID=`) count as not set.
     model_config = SettingsConfigDict(
-        env_prefix="MENTOR_", env_file=REPO_ROOT / ".env", extra="ignore"
+        env_prefix="MENTOR_", env_file=REPO_ROOT / ".env", extra="ignore", env_ignore_empty=True
     )
 
     database_url: str = "postgresql+psycopg://mentor:mentor-local-only@127.0.0.1:5432/mentor"
