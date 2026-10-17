@@ -1,10 +1,10 @@
 from typing import Any
 
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from tests.helpers import call, fake_open_tasks, scripted
 
-from mentor.agent.graph import EMPTY_REPLY, ask, build_graph
+from mentor.agent.graph import EMPTY_REPLY, ask, build_graph, recent_history
 
 
 def test_answers_directly_without_tools(system_prompt: Any) -> None:
@@ -40,3 +40,30 @@ def test_remembers_earlier_turns_in_the_same_thread(system_prompt: Any) -> None:
 def test_empty_model_answer_is_reported_not_silent(system_prompt: Any) -> None:
     graph = build_graph(scripted(AIMessage("")), [], system_prompt)
     assert ask(graph, "hi", "t1") == EMPTY_REPLY
+
+
+def test_history_sent_to_the_model_is_bounded_but_keeps_the_current_turn() -> None:
+    old = [HumanMessage("old question " * 200), AIMessage("old answer " * 200)]
+    recent = [HumanMessage("Remind me about the report"), AIMessage("Noted.")]
+    current = [
+        HumanMessage("What's open?"),
+        call("fake_open_tasks"),
+        ToolMessage("x" * 9000, tool_call_id="call-1"),
+    ]
+
+    sent = recent_history([*old, *recent, *current], max_tokens=500)
+
+    assert sent == [*recent, *current]  # oldest turn dropped; huge current turn kept whole
+
+
+def test_trimmed_history_never_starts_on_a_tool_result() -> None:
+    turn = [
+        HumanMessage("What's open?"),
+        call("fake_open_tasks"),
+        ToolMessage("y" * 400, tool_call_id="call-1"),
+        AIMessage("One task."),
+    ]
+
+    sent = recent_history([*turn, HumanMessage("Thanks")], max_tokens=60)
+
+    assert sent == [HumanMessage("Thanks")]

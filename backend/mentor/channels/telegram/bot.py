@@ -5,19 +5,26 @@ it replies to private messages with the sender's chat ID so you can add yours, a
 """
 
 import asyncio
+import logging
+from collections.abc import Callable, Coroutine
 from typing import Any, Literal
 
-from telegram import Update
-from telegram.constants import ChatAction
+from telegram import Message, Update
+from telegram.constants import ChatAction, ParseMode
+from telegram.error import BadRequest, NetworkError
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
+from mentor.channels.telegram.formatting import to_telegram_html
 from mentor.settings import get_settings
+
+log = logging.getLogger(__name__)
 
 TELEGRAM_MESSAGE_LIMIT = 4096
 
 Decision = Literal["answer", "pair", "ignore"]
+ErrorHandler = Callable[[object, ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]
 
 
 def decide(chat_id: int, allowed_chat_id: int | None) -> Decision:
@@ -37,6 +44,17 @@ def pairing_reply(chat_id: int) -> str:
     )
 
 
+async def send_reply(message: Message, reply: str) -> None:
+    # Split before converting, so no part ends inside a tag. Telegram counts the limit
+    # after removing tags, so each converted part still fits.
+    for part in split_message(reply):
+        try:
+            await message.reply_text(to_telegram_html(part), parse_mode=ParseMode.HTML)
+        except BadRequest as error:
+            log.warning("Telegram refused the formatting (%s); sending plain text", error)
+            await message.reply_text(part)
+
+
 def make_handler(
     graph: MentorGraph, allowed_chat_id: int | None
 ) -> MessageHandler[ContextTypes.DEFAULT_TYPE, None]:
@@ -50,27 +68,63 @@ def make_handler(
         elif decision == "answer":
             await chat.send_action(ChatAction.TYPING)
             reply = await asyncio.to_thread(ask, graph, message.text, f"telegram-{chat.id}")
-            for part in split_message(reply):
-                await message.reply_text(part)
+            await send_reply(message, reply)
 
     return MessageHandler(filters.ChatType.PRIVATE & filters.TEXT, on_text)
 
 
+def error_reply(error: BaseException | None) -> str:
+    reason = type(error).__name__ if error else "unknown error"
+    return f"Sorry, something went wrong on my side ({reason}). Please try again in a minute."
+
+
+def make_error_handler(allowed_chat_id: int | None) -> ErrorHandler:
+    async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        error = context.error
+        if isinstance(error, NetworkError):
+            # No internet, or the Mac just woke from sleep. The bot retries by itself (backing
+            # off to every 30 seconds), so one line per attempt is enough.
+            log.warning("Can't reach Telegram, retrying: %s", error)
+            return
+        log.error("Couldn't handle an update", exc_info=error)
+        # Tell the owner instead of going quiet, e.g. when Ollama or the database is down.
+        if not isinstance(update, Update):
+            return
+        chat, message = update.effective_chat, update.effective_message
+        if chat and message and decide(chat.id, allowed_chat_id) == "answer":
+            await message.reply_text(error_reply(error))
+
+    return on_error
+
+
+def configure_logging() -> None:
+    """Timestamped one-line log entries; launchd sends them to ~/Library/Logs/Mentor/."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S%z",
+    )
+    # httpx logs every request at INFO, and Telegram request URLs contain the bot token.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+
 def run_telegram_bot() -> None:
+    configure_logging()
     settings = get_settings()
     if settings.telegram_bot_token is None:
         raise SystemExit("MENTOR_TELEGRAM_BOT_TOKEN is not set in .env (see .env.example).")
     status = settings.telegram_allowed_chat_id or "not set yet (pairing mode)"
 
     async def announce(app: Application[Any, Any, Any, Any, Any, Any]) -> None:
-        print(
-            f"Mentor is listening on Telegram as @{app.bot.username}. "
-            f"Allowed chat: {status}. Ctrl+C stops it.",
-            flush=True,
+        log.info(
+            "Mentor is listening on Telegram as @%s. Allowed chat: %s. Ctrl+C stops it.",
+            app.bot.username,
+            status,
         )
 
     with open_agent() as graph:
         token = settings.telegram_bot_token.get_secret_value()
         app = Application.builder().token(token).post_init(announce).build()
         app.add_handler(make_handler(graph, settings.telegram_allowed_chat_id))
+        app.add_error_handler(make_error_handler(settings.telegram_allowed_chat_id))
         app.run_polling(allowed_updates=Update.ALL_TYPES)

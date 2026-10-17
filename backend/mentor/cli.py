@@ -9,6 +9,7 @@ from sqlalchemy.exc import OperationalError
 
 from mentor.agent.models import load_models_config
 from mentor.db.session import get_engine
+from mentor.settings import get_settings
 
 
 def preflight() -> None:
@@ -23,7 +24,10 @@ def preflight() -> None:
         ) from None
 
     config = load_models_config()
-    if any(role.provider == "ollama" for role in config.roles.values()):
+    providers = {role.provider for role in config.roles.values()}
+    if "gemini" in providers and get_settings().gemini_api_key is None:
+        raise SystemExit("MENTOR_GEMINI_API_KEY is not set (see .env.example).")
+    if "ollama" in providers:
         base_url = config.providers["ollama"]["base_url"]
         try:
             httpx.get(f"{base_url}/api/version", timeout=3).raise_for_status()

@@ -1,0 +1,53 @@
+# Mentor on the Google Cloud server (plan D20): Postgres + the Telegram bot.
+# Lives in /opt/mentor on the server, next to .env (secrets, owner-only) and secrets/
+# (the Google sign-in). infra/gcp/deploy.sh puts all of them there.
+name: mentor
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mentor
+      POSTGRES_USER: mentor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run infra/gcp/deploy.sh secrets}
+    # Sized for the 1 GB server; nothing outside this compose project can reach it.
+    command: postgres -c shared_buffers=64MB -c max_connections=20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentor -d mentor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging: *logging
+
+  migrate:
+    image: mentor:latest
+    entrypoint: ["alembic", "upgrade", "head"]
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+    logging: *logging
+
+  telegram:
+    image: mentor:latest
+    command: ["telegram"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MENTOR_HOST: cloud
+      MENTOR_MODELS_FILE: models.cloud.yaml
+      MENTOR_GOOGLE_TOKEN_PATH: /secrets/google_token.json
+    volumes:
+      - ./secrets:/secrets
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    logging: *logging
+
+volumes:
+  pgdata:

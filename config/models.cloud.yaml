@@ -1,0 +1,10 @@
+# Which model plays each role on the Google Cloud server (plan D20).
+# Selected with MENTOR_MODELS_FILE=models.cloud.yaml; the Mac keeps models.yaml (Gemma via Ollama).
+# The API key is on the free tier (your choice, 17 Oct): Google may use these prompts, including
+# email and calendar content, to improve its products. A billing-linked key stops that.
+providers: {}
+
+roles:
+  # No temperature: current Gemini Flash models only run at their fixed default.
+  orchestrator: { provider: gemini, model: "gemini-3.8-flash", temperature: null, thinking_level: low }
+  fast: { provider: gemini, model: "gemini-3.5-flash-lite", temperature: null, thinking_level: minimal }

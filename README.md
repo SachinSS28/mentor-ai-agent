@@ -25,3 +25,15 @@ uv run mentor chat            # terminal chat; the conversation is remembered be
 uv run mentor chat --new      # start a fresh conversation
 uv run mentor telegram        # Telegram bot; needs MENTOR_TELEGRAM_BOT_TOKEN in .env (see .env.example)
 ```
+
+## Always-on server (Google Cloud, until AWS)
+
+The Telegram bot runs on a free-tier Google Cloud server with Gemini, so it answers while the Mac sleeps (plan D20). Telegram allows one bot connection, so deploying stops the Mac's bot service.
+
+```sh
+infra/gcp/create-server.sh      # once: server, network, budget alert, Gemini API key (needs billing linked)
+infra/gcp/deploy.sh secrets     # copy the bot token, chat ID and Gemini key from .env
+infra/gcp/deploy.sh google-token  # copy the Google sign-in; repeat after each `uv run mentor google-auth`
+infra/gcp/deploy.sh             # build on the Mac, upload, (re)start; run after every code change
+infra/gcp/deploy.sh logs        # follow the bot's log
+```

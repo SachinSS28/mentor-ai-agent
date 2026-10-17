@@ -13,6 +13,11 @@ LOG_DIR="$HOME/Library/Logs/Mentor"
 DOMAIN="gui/$(id -u)"
 
 launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+# bootout returns before the old service has gone; bootstrapping too early fails with error 5.
+for _ in $(seq 1 20); do
+  launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break
+  sleep 0.5
+done
 
 if [ "${1:-}" = "uninstall" ]; then
   rm -f "$PLIST"

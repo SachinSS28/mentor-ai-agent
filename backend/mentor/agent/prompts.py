@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from mentor.charter import Charter
+from mentor.settings import Host
 
 LANGUAGE_RULES = {
     "english": (
@@ -22,7 +23,18 @@ TONE_RULES = {
 }
 
 
-def build_system_prompt(charter: Charter, persona: str, now: datetime) -> str:
+HOST_NOTES = {
+    "mac": "You run on {owner}'s Mac, so you answer only while it is awake.",
+    "cloud": (
+        "You run on an always-on Google Cloud server, so you keep answering while {owner}'s "
+        "Mac is closed or off."
+    ),
+}
+
+
+def build_system_prompt(
+    charter: Charter, persona: str, now: datetime, host: Host, model: str
+) -> str:
     owner = charter.owner.name
     body = persona.format(
         assistant_name=charter.assistant.name,
@@ -32,6 +44,7 @@ def build_system_prompt(charter: Charter, persona: str, now: datetime) -> str:
     )
     context = (
         f"Now: {now:%A %d %B %Y, %H:%M} ({charter.owner.timezone}). "
-        f"{owner} is based in {charter.owner.city}."
+        f"{owner} is based in {charter.owner.city}. "
+        f"{HOST_NOTES[host].format(owner=owner)} Your language model is {model}."
     )
     return f"{body.strip()}\n\n{context}"

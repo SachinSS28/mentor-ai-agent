@@ -2,12 +2,15 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PRIVATE_DIR = Path.home() / ".config" / "mentor"
+
+Host = Literal["mac", "cloud"]
 
 
 class Settings(BaseSettings):
@@ -18,6 +21,12 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://mentor:mentor-local-only@127.0.0.1:5432/mentor"
     config_dir: Path = REPO_ROOT / "config"
+    # Role-to-model map in config_dir: models.yaml (Ollama on the Mac) or models.cloud.yaml
+    # (Gemini, on the Google Cloud server).
+    models_file: str = "models.yaml"
+    # Where this copy of Mentor runs, so it can say so when asked.
+    host: Host = "mac"
+    gemini_api_key: SecretStr | None = None
     telegram_bot_token: SecretStr | None = None
     telegram_allowed_chat_id: int | None = None
     # Outside the repo, owner-only permissions; Secrets Manager from Phase 1.
