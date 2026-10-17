@@ -7,7 +7,9 @@ it replies to private messages with the sender's chat ID so you can add yours, a
 import asyncio
 import logging
 from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime, time, timedelta
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from telegram import Message, Update
 from telegram.constants import ChatAction, ParseMode
@@ -17,6 +19,7 @@ from telegram.ext import Application, ContextTypes, MessageHandler, filters
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
+from mentor.charter import owner_timezone
 from mentor.settings import get_settings
 
 log = logging.getLogger(__name__)
@@ -73,7 +76,20 @@ def make_handler(
     return MessageHandler(filters.ChatType.PRIVATE & filters.TEXT, on_text)
 
 
+def quota_reset_time(now: datetime) -> str:
+    """When Gemini's daily quota resets (midnight US Pacific time), in the owner's time zone."""
+    pacific = now.astimezone(ZoneInfo("America/Los_Angeles"))
+    midnight = datetime.combine(pacific.date() + timedelta(days=1), time(), pacific.tzinfo)
+    return f"{midnight.astimezone(owner_timezone()):%H:%M}"
+
+
 def error_reply(error: BaseException | None) -> str:
+    # Gemini's free tier caps requests per minute and per day.
+    if error and "RESOURCE_EXHAUSTED" in str(error):
+        return (
+            "I've hit Gemini's usage limit. Try again in a minute; if it keeps happening, "
+            f"today's free quota is used up and resets at {quota_reset_time(datetime.now(UTC))}."
+        )
     reason = type(error).__name__ if error else "unknown error"
     return f"Sorry, something went wrong on my side ({reason}). Please try again in a minute."
 

@@ -5,6 +5,7 @@
 #   - e2-micro VM in us-west1 with a 30 GB standard disk: inside the free tier. Its public IPv4
 #     address is billed (about US$3.65/month).
 #   - Own network with no open ports; SSH only through Google's IAP tunnel.
+#   - Daily snapshot of the disk, kept 7 days: the database's backup.
 #   - Monthly budget alert on the billing account (50/80/100%, as in the charter).
 #   - A Gemini API key restricted to the Gemini API, saved to .env (never printed).
 set -euo pipefail
@@ -39,6 +40,20 @@ if ! gcloud compute instances describe "$SERVER" --project "$PROJECT" --zone "$Z
     --no-service-account --no-scopes \
     --metadata=enable-oslogin=TRUE \
     --metadata-from-file=startup-script="$REPO_ROOT/infra/gcp/startup.sh"
+fi
+
+# 19:00 UTC is 03:00 in Hong Kong. Snapshots store only changed blocks (a few US cents a month)
+# and survive the server being deleted. Postgres recovers from them like after a power cut.
+if ! gcloud compute resource-policies describe mentor-daily --project "$PROJECT" \
+  --region "$REGION" >/dev/null 2>&1; then
+  gcloud compute resource-policies create snapshot-schedule mentor-daily --project "$PROJECT" \
+    --region "$REGION" --daily-schedule --start-time=19:00 --max-retention-days=7 \
+    --on-source-disk-delete=keep-auto-snapshots --storage-location="$REGION"
+fi
+if ! gcloud compute disks describe "$SERVER" --project "$PROJECT" --zone "$ZONE" \
+  --format='value(resourcePolicies)' | grep -q '/mentor-daily$'; then
+  gcloud compute disks add-resource-policies "$SERVER" --project "$PROJECT" --zone "$ZONE" \
+    --resource-policies=mentor-daily
 fi
 
 if ! gcloud billing budgets list --billing-account="$billing_id" \

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, Mock
@@ -12,6 +13,7 @@ from mentor.channels.telegram.bot import (
     decide,
     make_error_handler,
     pairing_reply,
+    quota_reset_time,
     send_reply,
     split_message,
 )
@@ -63,6 +65,18 @@ def test_owner_hears_when_a_message_fails(caplog: pytest.LogCaptureFixture) -> N
     update.effective_message.reply_text.assert_awaited_once()
     assert "ConnectionError" in update.effective_message.reply_text.await_args.args[0]
     assert caplog.records[0].exc_info is not None
+
+
+def test_owner_hears_when_gemini_usage_limit_is_hit() -> None:
+    update = message_from(42)
+    handle_error(update, RuntimeError("429 RESOURCE_EXHAUSTED. Quota exceeded for metric ..."))
+    assert "Gemini's usage limit" in update.effective_message.reply_text.await_args.args[0]
+
+
+def test_gemini_quota_resets_at_pacific_midnight_in_the_owners_time() -> None:
+    # The charter's owner is in Hong Kong: 15:00 while the US is on daylight time, else 16:00.
+    assert quota_reset_time(datetime(2026, 10, 17, 12, 0, tzinfo=UTC)) == "15:00"
+    assert quota_reset_time(datetime(2026, 12, 1, 12, 0, tzinfo=UTC)) == "16:00"
 
 
 def test_markdown_is_shown_as_telegram_formatting() -> None:

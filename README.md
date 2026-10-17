@@ -31,9 +31,18 @@ uv run mentor telegram        # Telegram bot; needs MENTOR_TELEGRAM_BOT_TOKEN in
 The Telegram bot runs on a free-tier Google Cloud server with Gemini, so it answers while the Mac sleeps (plan D20). Telegram allows one bot connection, so deploying stops the Mac's bot service. Set `MENTOR_GCP_PROJECT` in `.env` to your Google Cloud project ID first.
 
 ```sh
-infra/gcp/create-server.sh      # once: server, network, budget alert, Gemini API key (needs billing linked)
+infra/gcp/create-server.sh      # once: server, network, daily disk snapshot, budget alert, Gemini API key (needs billing linked)
 infra/gcp/deploy.sh secrets     # copy the bot token, chat ID and Gemini key from .env
 infra/gcp/deploy.sh google-token  # copy the Google sign-in; repeat after each `uv run mentor google-auth`
 infra/gcp/deploy.sh             # build on the Mac, upload, (re)start; run after every code change
 infra/gcp/deploy.sh logs        # follow the bot's log
 ```
+
+## Contributing
+
+1. Work on a branch and open a pull request. GitHub runs the checks (lint, types, tests with a real Postgres), and `main` takes a pull request once the checks pass and the owner approves it.
+2. Use your own accounts in your own `.env` (copy `.env.example`; git never stores it):
+   - **Telegram:** create your own bot with @BotFather. Never run Mentor with someone else's bot token: Telegram lets only one copy of a bot connect, so yours would knock theirs offline.
+   - **Model:** Ollama with Gemma 4 on your machine (the default, free), or your own Gemini key with `MENTOR_MODELS_FILE=models.cloud.yaml`.
+   - **Google (optional):** your own OAuth client in your own Google Cloud project, saved as `~/.config/mentor/google_client_secret.json`, then `uv run mentor google-auth`.
+3. Run `uv run pre-commit install` once, so the same checks and a secret scan run before each commit.
