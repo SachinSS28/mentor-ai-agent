@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     models_file: str = "models.yaml"
     # Where this copy of Mentor runs, so it can say so when asked.
     host: Host = "mac"
+    # The Google Cloud server the Mac's standby watches (same values as infra/gcp/config.sh).
+    gcp_project: str | None = None
+    gcp_zone: str = "us-west1-b"
+    gcp_server: str = "mentor"
     gemini_api_key: SecretStr | None = None
     telegram_bot_token: SecretStr | None = None
     telegram_allowed_chat_id: int | None = None

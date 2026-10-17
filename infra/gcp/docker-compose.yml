@@ -15,8 +15,11 @@ services:
       POSTGRES_DB: mentor
       POSTGRES_USER: mentor
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run infra/gcp/deploy.sh secrets}
-    # Sized for the 1 GB server; nothing outside this compose project can reach it.
+    # Sized for the 1 GB server. Published on the server's loopback only (the firewall opens
+    # nothing but SSH), so the Mac's standby can sync through an SSH tunnel.
     command: postgres -c shared_buffers=64MB -c max_connections=20
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

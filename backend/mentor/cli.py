@@ -12,29 +12,35 @@ from mentor.db.session import get_engine
 from mentor.settings import get_settings
 
 
-def preflight() -> None:
-    """Fail fast with a clear fix if the database or the local model server is down."""
+def not_ready() -> str | None:
+    """Why Mentor can't run here right now (database or model server down), with the fix."""
     try:
         with get_engine().connect() as conn:
             conn.execute(text("SELECT 1"))
     except OperationalError:
-        raise SystemExit(
+        return (
             "Can't reach the database. Start it with:\n"
             "  docker compose -f infra/docker-compose.yml up -d && uv run alembic upgrade head"
-        ) from None
+        )
 
     config = load_models_config()
     providers = {role.provider for role in config.roles.values()}
     if "gemini" in providers and get_settings().gemini_api_key is None:
-        raise SystemExit("MENTOR_GEMINI_API_KEY is not set (see .env.example).")
+        return "MENTOR_GEMINI_API_KEY is not set (see .env.example)."
     if "ollama" in providers:
         base_url = config.providers["ollama"]["base_url"]
         try:
             httpx.get(f"{base_url}/api/version", timeout=3).raise_for_status()
         except httpx.HTTPError:
-            raise SystemExit(
-                f"Can't reach Ollama at {base_url}. Start it with: ollama serve"
-            ) from None
+            return f"Can't reach Ollama at {base_url}. Start it with: ollama serve"
+    return None
+
+
+def preflight() -> None:
+    """Fail fast with a clear fix if the database or the local model server is down."""
+    problem = not_ready()
+    if problem:
+        raise SystemExit(problem)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -45,9 +51,21 @@ def main(argv: Sequence[str] | None = None) -> None:
     chat.add_argument("--once", metavar="TEXT", help="ask one question, print the reply, exit")
     commands.add_parser("telegram", help="run the Telegram bot")
     commands.add_parser(
+        "standby", help="on the Mac: take over Telegram while the cloud server is down"
+    )
+    commands.add_parser(
+        "sync", help="copy conversations and memories between the Mac and the cloud server"
+    )
+    commands.add_parser(
         "google-auth", help="connect your Google account (one-time, in the browser)"
     )
     args = parser.parse_args(argv)
+
+    if args.command in ("standby", "sync"):
+        from mentor.channels.telegram import failover
+
+        failover.run_standby() if args.command == "standby" else failover.sync_now()
+        return
 
     if args.command == "google-auth":
         from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError, connect_google

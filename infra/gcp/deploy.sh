@@ -52,9 +52,12 @@ deploy() {
   echo "Uploading the image..."
   docker save mentor:latest | gzip -1 | on_server "gunzip | sudo docker load"
 
-  # Telegram hands each message to one bot connection only, so the Mac stops answering.
+  # Telegram hands each message to one bot connection only, so the Mac stops answering, and
+  # what it said while answering is copied over before the server's bot starts.
   if launchctl print "gui/$(id -u)/com.mentor.telegram" >/dev/null 2>&1; then
-    "$REPO_ROOT/infra/launchd/install-telegram-service.sh" uninstall
+    "$REPO_ROOT/infra/launchd/mentor-service.sh" telegram uninstall
+    on_server "cd /opt/mentor && sudo docker compose up -d postgres"
+    "$REPO_ROOT/.venv/bin/mentor" sync || echo "Couldn't sync; the Mac's latest messages stay on the Mac."
     echo "Stopped the Mac's Telegram bot: the server answers from now on."
   fi
 

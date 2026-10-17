@@ -11,6 +11,7 @@ from datetime import UTC, datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
+from sqlalchemy.exc import SQLAlchemyError
 from telegram import Message, Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, NetworkError
@@ -20,11 +21,15 @@ from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
 from mentor.charter import owner_timezone
-from mentor.settings import get_settings
+from mentor.db.heartbeat import beat
+from mentor.db.session import get_engine
+from mentor.settings import Host, get_settings
 
 log = logging.getLogger(__name__)
 
 TELEGRAM_MESSAGE_LIMIT = 4096
+# The Mac's standby treats a few minutes without one as the cloud bot being down.
+HEARTBEAT_EVERY = 30
 
 Decision = Literal["answer", "pair", "ignore"]
 ErrorHandler = Callable[[object, ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]
@@ -124,6 +129,16 @@ def configure_logging() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
+async def keep_beating(host: Host) -> None:
+    """Record every HEARTBEAT_EVERY seconds that this bot is alive (see failover.py)."""
+    while True:
+        try:
+            await asyncio.to_thread(beat, get_engine(), host)
+        except SQLAlchemyError as error:
+            log.warning("Couldn't record the heartbeat: %s", error)
+        await asyncio.sleep(HEARTBEAT_EVERY)
+
+
 def run_telegram_bot() -> None:
     configure_logging()
     settings = get_settings()
@@ -137,10 +152,15 @@ def run_telegram_bot() -> None:
             app.bot.username,
             status,
         )
+        app.bot_data["heartbeat"] = asyncio.create_task(keep_beating(settings.host))
+
+    async def stop_beating(app: Application[Any, Any, Any, Any, Any, Any]) -> None:
+        app.bot_data["heartbeat"].cancel()
 
     with open_agent() as graph:
         token = settings.telegram_bot_token.get_secret_value()
-        app = Application.builder().token(token).post_init(announce).build()
+        builder = Application.builder().token(token).post_init(announce).post_stop(stop_beating)
+        app = builder.build()
         app.add_handler(make_handler(graph, settings.telegram_allowed_chat_id))
         app.add_error_handler(make_error_handler(settings.telegram_allowed_chat_id))
         app.run_polling(allowed_updates=Update.ALL_TYPES)

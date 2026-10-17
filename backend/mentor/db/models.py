@@ -229,6 +229,9 @@ class Memory(Base):
     embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBEDDING_DIMENSIONS))
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = updated_at()
+    # Forgetting marks the row instead of deleting it, so the Mac and the cloud copy of the
+    # database can pass the deletion on to each other (mentor.db.sync).
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Approval(Base):
@@ -309,3 +312,13 @@ class LlmUsage(Base):
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(10, 6), server_default="0")
     thread_id: Mapped[str | None] = mapped_column(Text)
     purpose: Mapped[str | None] = mapped_column(Text)
+
+
+class Heartbeat(Base):
+    """When each copy of the Telegram bot was last alive; the Mac's standby reads the cloud's."""
+
+    __tablename__ = "heartbeats"
+    __table_args__ = (one_of("host", ("mac", "cloud")),)
+
+    host: Mapped[str] = mapped_column(String(8), primary_key=True)
+    seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

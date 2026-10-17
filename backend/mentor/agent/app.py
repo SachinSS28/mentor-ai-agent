@@ -8,7 +8,7 @@ from mentor.agent.checkpoint import open_checkpointer
 from mentor.agent.graph import MentorGraph, build_graph
 from mentor.agent.models import get_chat_model, load_models_config
 from mentor.agent.prompts import build_system_prompt
-from mentor.agent.tools import READ_ONLY_TOOLS
+from mentor.agent.tools import TOOLS
 from mentor.charter import get_charter, owner_timezone
 from mentor.settings import get_settings
 
@@ -27,4 +27,4 @@ def open_agent() -> Iterator[MentorGraph]:
         return build_system_prompt(charter, persona, datetime.now(tz), settings.host, model_name)
 
     with open_checkpointer() as checkpointer:
-        yield build_graph(chat_model, READ_ONLY_TOOLS, system_prompt, checkpointer)
+        yield build_graph(chat_model, TOOLS, system_prompt, checkpointer)
