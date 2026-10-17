@@ -28,7 +28,7 @@ uv run mentor telegram        # Telegram bot; needs MENTOR_TELEGRAM_BOT_TOKEN in
 
 ## Always-on server (Google Cloud, until AWS)
 
-The Telegram bot runs on a free-tier Google Cloud server with Gemini, so it answers while the Mac sleeps (plan D20). Telegram allows one bot connection, so deploying stops the Mac's bot service.
+The Telegram bot runs on a free-tier Google Cloud server with Gemini, so it answers while the Mac sleeps (plan D20). Telegram allows one bot connection, so deploying stops the Mac's bot service. Set `MENTOR_GCP_PROJECT` in `.env` to your Google Cloud project ID first.
 
 ```sh
 infra/gcp/create-server.sh      # once: server, network, budget alert, Gemini API key (needs billing linked)
