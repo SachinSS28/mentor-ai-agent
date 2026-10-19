@@ -78,7 +78,7 @@ def word_file(*paragraphs: str) -> bytes:
 
 def test_word_documents_are_read_as_paragraphs() -> None:
     text = drive.docx_text(word_file("Sachin &amp; team", "Water Research, 2025"))
-    assert drive.tidy(text) == "Sachin & team\nWater Research, 2025"
+    assert drive.tidy(text, 100) == "Sachin & team\nWater Research, 2025"
 
 
 def test_documents_are_found_by_name_or_words() -> None:

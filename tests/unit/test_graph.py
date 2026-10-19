@@ -3,11 +3,13 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.tools import tool
 from langgraph.checkpoint.memory import InMemorySaver
 from tests.helpers import ScriptedModel, call, fake_open_tasks, scripted
 
 from mentor.agent.graph import (
     EMPTY_REPLY,
+    NOTHING_CHANGED,
     REFUSAL_REPLY,
     as_plain_text,
     ask,
@@ -131,3 +133,45 @@ def test_stored_conversation_keeps_claude_blocks_while_gemma_gets_text(system_pr
     sent_turn = model.sent[-1][2]  # after the system prompt and the first question
     assert sent_turn.content == "Checking your tasks."
     assert graph.get_state(config).values["messages"][1].content == CLAUDE_TURN.content
+
+
+@tool
+def add_task(title: str) -> str:
+    """Add a task."""
+    return f"Added T1: {title}."
+
+
+@tool
+def draft_email(to: str) -> str:
+    """Save a draft."""
+    return f"Not saved: {to!r} isn't an email address."
+
+
+def test_a_claimed_action_without_a_tool_is_rewritten_as_an_offer(system_prompt: Any) -> None:
+    model = scripted("I've added a reminder for 5 Nov.", "Shall I add a reminder for 5 Nov?")
+    graph = build_graph(model, [add_task], system_prompt, InMemorySaver())
+    assert ask(graph, "Seminar on 12 Nov", "t1") == "Shall I add a reminder for 5 Nov?"
+    stored = graph.get_state({"configurable": {"thread_id": "t1"}}).values["messages"]
+    assert [m.text for m in stored][-1] == "Shall I add a reminder for 5 Nov?"
+    assert not any("Check of your last reply" in m.text for m in stored)  # the check isn't kept
+
+
+def test_a_real_action_keeps_its_confirmation(system_prompt: Any) -> None:
+    model = scripted(call("add_task", title="Register"), "I've added T1: Register.")
+    graph = build_graph(model, [add_task], system_prompt)
+    assert ask(graph, "Remind me to register", "t1") == "I've added T1: Register."
+
+
+def test_a_failed_tool_doesnt_count_as_done(system_prompt: Any) -> None:
+    model = scripted(
+        call("draft_email", to="ravi"),
+        "I have drafted the email.",
+        "I have drafted it anyway.",  # the rewrite still claims it
+    )
+    graph = build_graph(model, [draft_email], system_prompt)
+    assert ask(graph, "Draft to Ravi", "t1") == f"I have drafted the email.\n\n{NOTHING_CHANGED}"
+
+
+def test_ordinary_answers_are_left_alone(system_prompt: Any) -> None:
+    graph = build_graph(scripted("Your calendar is free on 12 Nov."), [add_task], system_prompt)
+    assert ask(graph, "Am I free?", "t1") == "Your calendar is free on 12 Nov."

@@ -52,6 +52,8 @@ uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_
 
 **Your documents:** Mentor reads (never changes) one Google Drive folder, "Mentor" by default (`documents` in `config/charter.yaml`): CVs, publication lists, statements and past cover letters, so applications and outreach use your real material.
 
+**Photos, scans and PDFs:** send Mentor a photo, screenshot, image, PDF or Word file on Telegram, with a question as the caption ("is this seminar worth my time?"). Gemma reads it on the Mac, scanned PDFs included (first 5 pages), and Mentor answers and offers the next step, such as a calendar block or reminder. Files over Telegram's 20 MB limit can go in the Drive folder instead.
+
 **Research highlights:** on Mondays and Thursdays the 08:00 message adds the most-cited recent papers in your field and new papers in high-impact journals (both from the journals listed under `highlights` in `config/briefing.yaml`, on `research_topics` in `config/charter.yaml`). The daily news also covers water and climate disasters, corporate sustainability and government climate action.
 
 **Weekly review:** every Sunday at 19:00 Mentor sends the week's facts (tasks done and overdue, applications, networking, research) and a short coach's note with the top three for next week, measured against the goals in `config/profile.md`.

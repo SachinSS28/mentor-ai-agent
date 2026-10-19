@@ -19,10 +19,12 @@ dependencies = [
     "langgraph>=1.2.15",
     "langgraph-checkpoint-postgres>=3.2.0",
     "pgvector>=0.5.1",
+    "pillow>=13.0.0",
     "psycopg-pool>=3.3.3",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.0",
     "pypdf>=6.21.1",
+    "pypdfium2>=5.14.0",
     "python-telegram-bot[job-queue]>=22.8",
     "pyyaml>=6.0.3",
     "sqlalchemy>=2.0",
@@ -69,7 +71,7 @@ exclude = ["backend/mentor/db/migrations/"]  # generated code
 
 # Google's client libraries ship without type information.
 [[tool.mypy.overrides]]
-module = ["googleapiclient.*", "google_auth_oauthlib.*", "feedparser"]
+module = ["googleapiclient.*", "google_auth_oauthlib.*", "feedparser", "pypdfium2"]
 ignore_missing_imports = true
 
 # google-auth's Credentials methods are unannotated; allow calling them only here.
