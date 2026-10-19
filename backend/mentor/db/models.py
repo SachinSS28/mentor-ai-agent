@@ -16,12 +16,14 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Identity,
     Integer,
     MetaData,
     Numeric,
     SmallInteger,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
@@ -322,3 +324,71 @@ class Heartbeat(Base):
 
     host: Mapped[str] = mapped_column(String(8), primary_key=True)
     seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+JOB_STATUSES = (
+    "new",  # found in an alert, not shown yet
+    "shortlisted",  # shown in a digest
+    "saved",
+    "skipped",
+    "applied",
+    "interview",
+    "offer",
+    "rejected",
+    "withdrawn",
+)
+
+
+class Job(Base):
+    """A job found in a job-alert email (LinkedIn so far). `ref` is the short J-number shown to
+    the owner ("save J12"); `fit_score` is 0-100 against the owner's profile."""
+
+    __tablename__ = "jobs"
+    __table_args__ = (
+        UniqueConstraint("source", "external_id", name="uq_jobs_source_external_id"),
+        one_of("source", ("linkedin",)),
+        one_of("status", JOB_STATUSES),
+        CheckConstraint("fit_score BETWEEN 0 AND 100", name="fit_score"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    ref: Mapped[int] = mapped_column(BigInteger, Identity(), unique=True)
+    source: Mapped[str] = mapped_column(String(16))
+    external_id: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    company: Mapped[str] = mapped_column(Text)
+    location: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text)
+    insights: Mapped[list[Any]] = mapped_column(server_default="[]")  # e.g. "1 school alum"
+    alert: Mapped[str | None] = mapped_column(Text)  # the saved search that found it
+    email_id: Mapped[str] = mapped_column(Text)
+    found_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    fit_score: Mapped[int | None] = mapped_column(SmallInteger)
+    fit_reason: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), server_default="new", index=True)
+    shortlisted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    follow_up_on: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = created_at()
+    updated_at: Mapped[datetime] = updated_at()
+
+
+class ProcessedEmail(Base):
+    """Job-alert emails already read, so each is parsed once."""
+
+    __tablename__ = "processed_emails"
+
+    email_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    jobs_found: Mapped[int] = mapped_column(Integer)
+    processed_at: Mapped[datetime] = created_at()
+
+
+class AppState(Base):
+    """Small facts Mentor keeps between restarts, e.g. the date of the last job digest."""
+
+    __tablename__ = "app_state"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = updated_at()

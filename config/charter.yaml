@@ -48,9 +48,22 @@ routines: []
 # Areas only, never exact addresses.
 places: []
 #  - label: home
-#    area: Andheri West
-#    usual_mode: local_train      # car | local_train | metro | cab
+#    area: Central
+#    usual_mode: mtr              # car | mtr | bus | cab
 #    buffer_minutes: 15
+
+# Job Desk: jobs from your LinkedIn job-alert emails, ranked against your profile.
+job_search:
+  focus:
+    - Water and environmental engineering (integrated water management, hydraulics, wastewater, utilities)
+    - Academic and research positions (professor, lecturer, researcher)
+    - Engineering and sustainability consulting or advisory
+    - Anything else that fits the CV well
+  locations: [Hong Kong]
+  digest_time: "08:00"         # daily shortlist on Telegram, Hong Kong time
+  min_score: 50                # fit 0-100; lower-scoring jobs stay out of the digest
+  digest_size: 8
+  follow_up_days: 7            # reminder this many days after you apply
 
 budget:
   monthly_cap_hkd: 500         # all-in: AWS + AI models (about US$64)

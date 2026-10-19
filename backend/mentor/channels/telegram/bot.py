@@ -12,6 +12,8 @@ from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 import anthropic
+from langchain_core.messages import AIMessage
+from langchain_core.runnables import RunnableConfig
 from sqlalchemy.exc import SQLAlchemyError
 from telegram import Message, Update
 from telegram.constants import ChatAction, ParseMode
@@ -24,6 +26,9 @@ from mentor.channels.telegram.formatting import to_telegram_html
 from mentor.charter import owner_timezone
 from mentor.db.heartbeat import beat
 from mentor.db.session import get_engine
+from mentor.jobs import desk
+from mentor.jobs import store as job_store
+from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 from mentor.settings import Host, get_settings
 
 log = logging.getLogger(__name__)
@@ -31,6 +36,9 @@ log = logging.getLogger(__name__)
 TELEGRAM_MESSAGE_LIMIT = 4096
 # The Mac's standby treats a few minutes without one as the cloud bot being down.
 HEARTBEAT_EVERY = 30
+# The Job Desk reads new job alerts this often, and sends the day's shortlist when it is due.
+JOB_DESK_EVERY = 15 * 60
+GOOGLE_EXPIRED_TOLD_ON = "google.expired_told_on"
 
 Decision = Literal["answer", "pair", "ignore"]
 ErrorHandler = Callable[[object, ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]
@@ -175,6 +183,43 @@ async def keep_beating(host: Host) -> None:
         await asyncio.sleep(HEARTBEAT_EVERY)
 
 
+async def send_to_owner(bot: Any, chat_id: int, text: str) -> None:
+    """A message Mentor starts itself (not a reply), e.g. the morning job shortlist."""
+    for part in split_message(text):
+        try:
+            await bot.send_message(chat_id, to_telegram_html(part), parse_mode=ParseMode.HTML)
+        except BadRequest as error:
+            log.warning("Telegram refused the formatting (%s); sending plain text", error)
+            await bot.send_message(chat_id, part)
+
+
+def make_job_desk(
+    graph: MentorGraph, chat_id: int
+) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
+    async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
+        now = datetime.now(owner_timezone())
+        try:
+            digest = await asyncio.to_thread(desk.tick, now)
+        except GoogleNotConnectedError as error:
+            # Once a day is enough: the Job Desk retries every 15 minutes.
+            if job_store.get_state(GOOGLE_EXPIRED_TOLD_ON) != now.date().isoformat():
+                job_store.set_state(GOOGLE_EXPIRED_TOLD_ON, now.date().isoformat())
+                await send_to_owner(context.bot, chat_id, f"The Job Desk can't read Gmail: {error}")
+            return
+        except Exception:
+            log.exception("The Job Desk check failed; trying again in 15 minutes")
+            return
+        if digest:
+            await send_to_owner(context.bot, chat_id, digest)
+            # Part of the conversation too, so a reply like "save J12" or "the second one" has
+            # the shortlist in context.
+            config: RunnableConfig = {"configurable": {"thread_id": f"telegram-{chat_id}"}}
+            update = {"messages": [AIMessage(digest)]}
+            await asyncio.to_thread(graph.update_state, config, update, as_node="agent")
+
+    return run
+
+
 def run_telegram_bot() -> None:
     configure_logging()
     settings = get_settings()
@@ -199,4 +244,11 @@ def run_telegram_bot() -> None:
         app = builder.build()
         app.add_handler(make_handler(graph, settings.telegram_allowed_chat_id))
         app.add_error_handler(make_error_handler(settings.telegram_allowed_chat_id))
+        if settings.telegram_allowed_chat_id is not None and app.job_queue is not None:
+            app.job_queue.run_repeating(
+                make_job_desk(graph, settings.telegram_allowed_chat_id),
+                interval=JOB_DESK_EVERY,
+                first=60,
+                name="job-desk",
+            )
         app.run_polling(allowed_updates=Update.ALL_TYPES)

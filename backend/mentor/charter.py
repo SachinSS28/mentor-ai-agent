@@ -23,12 +23,24 @@ class OwnerConfig(BaseModel):
     timezone: str = "Asia/Hong_Kong"
 
 
+class JobSearchConfig(BaseModel):
+    """The Job Desk: what to look for, and when to send the shortlist."""
+
+    focus: list[str] = []
+    locations: list[str] = []
+    digest_time: str = "08:00"  # owner's time zone
+    min_score: int = 50  # jobs below this fit score stay out of the digest
+    digest_size: int = 8
+    follow_up_days: int = 7
+
+
 class Charter(BaseModel):
     # Sections not used yet (workspaces, goals, budget, ...) are kept as plain data.
     model_config = ConfigDict(extra="allow")
 
     assistant: AssistantConfig
     owner: OwnerConfig
+    job_search: JobSearchConfig = JobSearchConfig()
 
 
 def load_charter(path: Path | None = None) -> Charter:

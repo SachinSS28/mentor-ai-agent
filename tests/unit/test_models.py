@@ -15,6 +15,9 @@ EXPECTED_TABLES = {
     "audit_log",
     "notion_sync",
     "llm_usage",
+    "jobs",
+    "processed_emails",
+    "app_state",
     "heartbeats",
 }
 

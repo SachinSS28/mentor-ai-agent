@@ -22,7 +22,7 @@ dependencies = [
     "psycopg-pool>=3.3.3",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.0",
-    "python-telegram-bot>=22.8",
+    "python-telegram-bot[job-queue]>=22.8",
     "pyyaml>=6.0.3",
     "sqlalchemy>=2.0",
 ]
@@ -57,7 +57,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "SIM"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 # Alembic's template imports op/sa/pgvector up front; keep them even while a migration is empty.
-"backend/mentor/db/migrations/versions/*" = ["F401"]
+"backend/mentor/db/migrations/versions/*" = ["F401", "E501"]  # generated; CHECK lists run long
 
 [tool.mypy]
 python_version = "3.13"

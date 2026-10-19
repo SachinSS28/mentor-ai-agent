@@ -38,6 +38,8 @@ uv run mentor chat --new      # start a fresh conversation
 uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_BOT_TOKEN in .env (see .env.example)
 ```
 
+**Job Desk:** Mentor reads your LinkedIn job-alert emails every 15 minutes, numbers each job (J12), scores it against your profile and the `job_search` section of `config/charter.yaml`, and sends a shortlist on Telegram at 08:00. Reply "save J12", "applied J12" or "cover letter for J12"; emails to recruiters are saved as Gmail drafts, never sent.
+
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
 ## Always-on server (Google Cloud): paused

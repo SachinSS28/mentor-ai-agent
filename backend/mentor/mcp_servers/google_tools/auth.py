@@ -14,10 +14,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 from mentor.settings import get_settings
 
-# Read-only for now; Phase 1 adds calendar holds and Gmail drafts.
+# Calendar and Gmail read-only, plus Gmail drafts (Mentor writes them; only the owner sends).
+GMAIL_COMPOSE = "https://www.googleapis.com/auth/gmail.compose"
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/gmail.readonly",
+    GMAIL_COMPOSE,
 ]
 
 
@@ -54,12 +56,18 @@ def connect_google() -> str:
     return ", ".join(creds.scopes or [])
 
 
+def has_scope(creds: Credentials, scope: str) -> bool:
+    return scope in (creds.granted_scopes or creds.scopes or [])
+
+
 def get_credentials() -> Credentials:
     """Load the saved token, refreshing it when it has expired."""
     token_path = get_settings().google_token_path
     if not token_path.exists():
         raise GoogleNotConnectedError("Google isn't connected yet. Run: uv run mentor google-auth")
-    creds: Credentials = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+    # Load with the scopes the owner actually granted (saved in the token), not SCOPES: asking for
+    # a newer scope on refresh fails, and that would also stop reading calendar and email.
+    creds: Credentials = Credentials.from_authorized_user_file(str(token_path))
     if not creds.valid:
         if not (creds.expired and creds.refresh_token):
             raise GoogleNotConnectedError("Google token is invalid. Run: uv run mentor google-auth")
