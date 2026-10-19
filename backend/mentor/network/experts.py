@@ -46,11 +46,21 @@ class Candidate:
         return self.orcid or f"https://openalex.org/{self.author_id}"
 
 
-def phrase_query(phrase: str) -> str:
-    """'leak detection + water' -> '"leak detection" "water"': each part matched exactly.
+def phrase_parts(phrase: str) -> list[str]:
+    """'leak detection + water' -> ['"leak detection"', '"water"'], each matched exactly.
     Commas would split the OpenAlex filter, so they are dropped."""
     parts = [part.replace(",", " ").replace('"', "").strip() for part in phrase.split("+")]
-    return " ".join(f'"{part}"' for part in parts if part)
+    return [f'"{part}"' for part in parts if part]
+
+
+def phrase_query(phrase: str) -> str:
+    return " ".join(phrase_parts(phrase))
+
+
+def any_phrase_query(phrases: Iterable[str]) -> str:
+    """One search for any of the phrases: ("a") OR ("b" AND "c")."""
+    groups = [" AND ".join(parts) for parts in map(phrase_parts, phrases) if parts]
+    return " OR ".join(f"({group})" for group in groups)
 
 
 def search_works(

@@ -7,7 +7,7 @@ lookback_days: 3       # how far back each collection looks
 per_section:           # most items per section in the morning message
   paper: 4
   journal: 3
-  news: 3
+  news: 5               # water, climate disasters, sustainability & CSR, policy
   funding: 2
 
 # New papers (OpenAlex: free scholarly index of Elsevier, ASCE, IWA, Springer, Wiley, MDPI ...).
@@ -49,6 +49,10 @@ news:
   Hong Kong water departments: https://news.google.com/rss/search?q=%22Water%20Supplies%20Department%22%20OR%20%22Drainage%20Services%20Department%22&hl=en-HK&gl=HK&ceid=HK:en
   Smart & digital water: https://news.google.com/rss/search?q=%22smart%20water%22%20OR%20%22digital%20water%22%20OR%20%22water%20technology%22&hl=en&gl=US&ceid=US:en
   Climate-resilient infrastructure: https://news.google.com/rss/search?q=%22climate%20resilience%22%20water%20infrastructure&hl=en&gl=US&ceid=US:en
+  Water & climate disasters: https://news.google.com/rss/search?q=flood%20OR%20drought%20OR%20typhoon%20OR%20%22extreme%20rainfall%22%20OR%20landslide%20disaster%20climate&hl=en&gl=US&ceid=US:en
+  Corporate sustainability & CSR: https://news.google.com/rss/search?q=%22corporate%20sustainability%22%20OR%20CSR%20OR%20ESG%20water%20OR%20climate&hl=en&gl=US&ceid=US:en
+  Government climate action: https://news.google.com/rss/search?q=government%20%22climate%20change%22%20policy%20OR%20%22net%20zero%22%20OR%20%22carbon%20neutrality%22&hl=en&gl=US&ceid=US:en
+  Hong Kong climate & sustainability: https://news.google.com/rss/search?q=Hong%20Kong%20%22climate%20change%22%20OR%20%22carbon%20neutrality%22%20OR%20sustainability%20government&hl=en-HK&gl=HK&ceid=HK:en
   HKSAR Government press releases:
     url: https://www.info.gov.hk/gia/rss/general_en.xml
     keywords: [water, drainage, sewage, sewerage, flood, rainstorm, climate, carbon, environment]
@@ -58,3 +62,29 @@ funding:
   Water conferences (WikiCFP): http://www.wikicfp.com/cfp/rss?cat=water
   Water research funding calls: https://news.google.com/rss/search?q=%22call%20for%20proposals%22%20water%20research&hl=en&gl=US&ceid=US:en
   Hong Kong research grants: https://news.google.com/rss/search?q=%22Research%20Grants%20Council%22%20OR%20%22Innovation%20and%20Technology%20Fund%22%20Hong%20Kong&hl=en-HK&gl=HK&ceid=HK:en
+
+# Research highlights, twice a week in the 08:00 message, on research_topics in config/charter.yaml.
+# Top journals: two-year mean citedness about 7 or more in OpenAlex (a free stand-in for the
+# Journal Impact Factor); the number after each name is its ISSN.
+highlights:
+  days: [Monday, Thursday]
+  cited_months: 24             # the most-cited papers published in the last 24 months
+  cited_count: 4
+  journal_days: 4              # new papers in these journals since the last highlights
+  journal_count: 4
+  top_journals:
+    Nature Sustainability: 2398-9629
+    Nature Water: 2731-6084
+    Nature Communications: 2041-1723
+    npj Clean Water: 2059-7037
+    Nature Climate Change: 1758-678X
+    Water Research: 0043-1354
+    Journal of Cleaner Production: 0959-6526
+    Science of the Total Environment: 0048-9697
+    Resources, Conservation and Recycling: 0921-3449
+    Environment International: 0160-4120
+    Environmental Science & Technology: 0013-936X
+    One Earth: 2590-3322
+    Hydrology and Earth System Sciences: 1027-5606
+    Journal of Hydrology: 0022-1694
+    Water Resources Research: 0043-1397

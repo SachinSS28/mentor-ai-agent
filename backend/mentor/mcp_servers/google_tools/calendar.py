@@ -1,4 +1,4 @@
-"""Google Calendar, read-only."""
+"""Google Calendar: read events, and add blocks to the owner's own calendar (never with guests)."""
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -7,7 +7,14 @@ from zoneinfo import ZoneInfo
 
 from googleapiclient.discovery import build
 
-from mentor.mcp_servers.google_tools.auth import get_credentials
+from mentor.mcp_servers.google_tools.auth import (
+    CALENDAR_EVENTS,
+    GoogleNotConnectedError,
+    get_credentials,
+    has_scope,
+)
+
+ADDED_BY = "Added by Mentor."
 
 
 @dataclass(frozen=True)
@@ -73,3 +80,42 @@ def format_event(event: Event) -> str:
     ]
     suffix = f" — {', '.join(details)}" if details else ""
     return f"- {when}: {event.title}{suffix}"
+
+
+def block_body(title: str, start: datetime, end: datetime, notes: str = "") -> dict[str, Any]:
+    """An event on the owner's own calendar only: no attendees, so nobody is ever invited."""
+    zone = str(start.tzinfo)
+    return {
+        "summary": title.strip(),
+        "description": f"{notes.strip()}\n\n{ADDED_BY}".strip(),
+        "start": {"dateTime": start.isoformat(), "timeZone": zone},
+        "end": {"dateTime": end.isoformat(), "timeZone": zone},
+    }
+
+
+def add_block(title: str, start: datetime, end: datetime, notes: str = "") -> str:
+    """Adds the event to the primary calendar and returns its link."""
+    creds = get_credentials()
+    if not has_scope(creds, CALENDAR_EVENTS):
+        raise GoogleNotConnectedError(
+            "Mentor needs permission to add calendar events. Reconnect Google on the Mac with: "
+            "uv run mentor google-auth"
+        )
+    service = build("calendar", "v3", credentials=creds, cache_discovery=False)
+    event = (
+        service.events()
+        .insert(calendarId="primary", body=block_body(title, start, end, notes), sendUpdates="none")
+        .execute()
+    )
+    return str(event.get("htmlLink", ""))
+
+
+def overlapping(events: list[Event], start: datetime, end: datetime) -> list[Event]:
+    return [
+        e
+        for e in events
+        if isinstance(e.start, datetime)
+        and isinstance(e.end, datetime)
+        and e.start < end
+        and start < e.end
+    ]

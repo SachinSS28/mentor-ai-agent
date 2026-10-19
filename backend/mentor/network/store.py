@@ -116,6 +116,7 @@ def track(
             session.add(contact)
         if status:
             contact.outreach = status
+            contact.outreach_at = now
             if status == "invited":
                 contact.follow_up_on = now.date() + timedelta(days=follow_up_days)
             else:
@@ -124,6 +125,7 @@ def track(
                 contact.last_contact = now.date()
         elif contact.outreach in (None, "suggested"):
             contact.outreach = "to_contact"  # the owner took an interest
+            contact.outreach_at = now
         if organization.strip():
             contact.organization = organization.strip()
         if notes.strip():
@@ -160,3 +162,16 @@ def counts() -> dict[str, int]:
     )
     with get_sessionmaker()() as session:
         return {status: n for status, n in session.execute(query) if status}
+
+
+def changed_between(start: datetime, end: datetime) -> list[Person]:
+    """Contacts whose outreach status the owner changed in the period."""
+    query = select(Person).where(Person.outreach_at >= start, Person.outreach_at < end)
+    with get_sessionmaker()() as session:
+        return list(session.scalars(query.order_by(Person.outreach_at)))
+
+
+def suggested_between(start: datetime, end: datetime) -> int:
+    query = select(func.count()).where(Person.suggested_at >= start, Person.suggested_at < end)
+    with get_sessionmaker()() as session:
+        return int(session.scalar(query) or 0)

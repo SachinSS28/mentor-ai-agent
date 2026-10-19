@@ -48,6 +48,14 @@ uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_
 
 **Web search:** Mentor searches the web and reads pages for anything beyond your own data: companies, events, news, people's public work pages. It uses Tavily's free plan (1,000 searches a month, no card), with the key in `.env` as `MENTOR_TAVILY_API_KEY`. It never reads LinkedIn pages.
 
+**Tasks and reminders:** "remind me Friday 9am to email Prof. Chan" adds a task (numbered like T3) with a Telegram reminder; "done T3" closes it. Mentor can also put focus, writing or meditation blocks on your own Google Calendar; it never invites anyone.
+
+**Your documents:** Mentor reads (never changes) one Google Drive folder, "Mentor" by default (`documents` in `config/charter.yaml`): CVs, publication lists, statements and past cover letters, so applications and outreach use your real material.
+
+**Research highlights:** on Mondays and Thursdays the 08:00 message adds the most-cited recent papers in your field and new papers in high-impact journals (both from the journals listed under `highlights` in `config/briefing.yaml`, on `research_topics` in `config/charter.yaml`). The daily news also covers water and climate disasters, corporate sustainability and government climate action.
+
+**Weekly review:** every Sunday at 19:00 Mentor sends the week's facts (tasks done and overdue, applications, networking, research) and a short coach's note with the top three for next week, measured against the goals in `config/profile.md`.
+
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
 ## Always-on server (Google Cloud): paused

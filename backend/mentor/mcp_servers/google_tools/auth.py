@@ -14,12 +14,17 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 from mentor.settings import get_settings
 
-# Calendar and Gmail read-only, plus Gmail drafts (Mentor writes them; only the owner sends).
+# Read calendar, email and Drive; add events to the owner's own calendar (never with guests);
+# write Gmail drafts (Mentor writes them; only the owner sends).
 GMAIL_COMPOSE = "https://www.googleapis.com/auth/gmail.compose"
+CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events"
+DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly"
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/gmail.readonly",
     GMAIL_COMPOSE,
+    CALENDAR_EVENTS,
+    DRIVE_READONLY,
 ]
 
 

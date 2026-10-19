@@ -45,14 +45,27 @@ class PracticeConfig(BaseModel):
 
 
 class NetworkConfig(BaseModel):
-    """People to meet: who to look for (topics as phrases; "a + b" needs both), and when."""
+    """People to meet (on the charter's research_topics), and when to suggest them."""
 
     suggest_day: str = "Monday"  # weekly suggestions join that day's morning message
     suggest_size: int = 5
     years: int = 3  # papers from this many years back count
     prefer_international: bool = True  # careers that include institutions outside Hong Kong first
     follow_up_days: int = 7  # ask whether a connection request was accepted
-    topics: dict[str, list[str]] = {}
+
+
+class DocumentsConfig(BaseModel):
+    """The one Google Drive folder Mentor may read (read-only)."""
+
+    drive_folder: str = "Mentor"
+
+
+class ReviewConfig(BaseModel):
+    """The weekly review: progress, slips and next week's top three."""
+
+    enabled: bool = True
+    day: str = "Sunday"
+    time: str = "19:00"  # owner's time zone
 
 
 class Charter(BaseModel):
@@ -64,6 +77,11 @@ class Charter(BaseModel):
     job_search: JobSearchConfig = JobSearchConfig()
     practice: PracticeConfig = PracticeConfig()
     network: NetworkConfig = NetworkConfig()
+    documents: DocumentsConfig = DocumentsConfig()
+    review: ReviewConfig = ReviewConfig()
+    # The owner's research topics as exact phrases ("a + b" needs both), for finding people and
+    # the research highlights.
+    research_topics: dict[str, list[str]] = {}
 
 
 def load_charter(path: Path | None = None) -> Charter:

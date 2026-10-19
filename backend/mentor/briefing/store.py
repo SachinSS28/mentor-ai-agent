@@ -4,11 +4,11 @@ import uuid
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from mentor.briefing.sources import Item
-from mentor.db.models import BriefingItem
+from mentor.db.models import BriefingItem, ResearchHighlight
 from mentor.db.session import get_sessionmaker
 
 
@@ -103,3 +103,13 @@ def search(
     stmt = stmt.order_by(BriefingItem.score.desc(), BriefingItem.found_at.desc()).limit(limit)
     with get_sessionmaker()() as session:
         return list(session.scalars(stmt))
+
+
+def sent_between(start: datetime, end: datetime) -> int:
+    """Briefing items and research highlights sent to the owner in the period."""
+    items = select(func.count()).where(BriefingItem.sent_at >= start, BriefingItem.sent_at < end)
+    highlights = select(func.count()).where(
+        ResearchHighlight.sent_at >= start, ResearchHighlight.sent_at < end
+    )
+    with get_sessionmaker()() as session:
+        return int(session.scalar(items) or 0) + int(session.scalar(highlights) or 0)

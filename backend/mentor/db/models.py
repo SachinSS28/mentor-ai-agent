@@ -100,6 +100,9 @@ class Goal(Base):
 
 
 class Task(Base):
+    """A to-do. `ref` is the short T-number shown to the owner ("done T3"); `remind_at` sends a
+    Telegram reminder once, and `reminded_at` records that it went."""
+
     __tablename__ = "tasks"
     __table_args__ = (
         one_of("status", ("open", "done", "cancelled")),
@@ -109,6 +112,7 @@ class Task(Base):
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
+    ref: Mapped[int] = mapped_column(BigInteger, Identity(), unique=True)
     title: Mapped[str] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
     workspace_id: Mapped[str | None] = workspace_fk()
@@ -119,6 +123,8 @@ class Task(Base):
     source: Mapped[str] = mapped_column(String(16))
     created_by: Mapped[str] = mapped_column(String(16))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    remind_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = updated_at()
 
@@ -171,6 +177,7 @@ class Person(Base):
     profile_url: Mapped[str | None] = mapped_column(Text)  # ORCID or OpenAlex page
     about: Mapped[str | None] = mapped_column(Text)  # why Mentor suggested them
     outreach: Mapped[str | None] = mapped_column(String(16), index=True)
+    outreach_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # last change
     suggested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     follow_up_on: Mapped[date | None] = mapped_column(Date)
     last_contact: Mapped[date | None] = mapped_column(Date)
@@ -449,3 +456,21 @@ class BriefingItem(Base):
     status: Mapped[str] = mapped_column(String(8), server_default="new", index=True)
     found_at: Mapped[datetime] = created_at()
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ResearchHighlight(Base):
+    """A paper sent in the twice-weekly research highlights: one of the most-cited recent papers
+    in the owner's topics ("cited") or a new paper in a high-impact journal ("top_journal")."""
+
+    __tablename__ = "research_highlights"
+    __table_args__ = (one_of("kind", ("cited", "top_journal")),)
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    work_id: Mapped[str] = mapped_column(Text, unique=True)  # OpenAlex id
+    kind: Mapped[str] = mapped_column(String(16))
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text)
+    journal: Mapped[str | None] = mapped_column(Text)
+    published_on: Mapped[date | None] = mapped_column(Date)
+    citations: Mapped[int] = mapped_column(Integer, server_default="0")
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)

@@ -20,6 +20,7 @@ EXPECTED_TABLES = {
     "app_state",
     "briefing_items",
     "heartbeats",
+    "research_highlights",
 }
 
 

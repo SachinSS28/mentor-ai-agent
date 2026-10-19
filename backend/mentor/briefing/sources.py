@@ -36,6 +36,17 @@ class FilteredFeed(BaseModel):
 type Feed = str | FilteredFeed
 
 
+class HighlightsConfig(BaseModel):
+    """Twice-weekly research highlights from OpenAlex, on the charter's research_topics."""
+
+    days: list[str] = ["Monday", "Thursday"]
+    cited_months: int = 24  # the most-cited papers published in this many months
+    cited_count: int = 4
+    journal_days: int = 4  # new papers in top journals since this many days ago
+    journal_count: int = 4
+    top_journals: dict[str, str] = {}  # name: ISSN
+
+
 class BriefingConfig(BaseModel):
     min_score: int = 60
     lookback_days: int = 3
@@ -44,6 +55,7 @@ class BriefingConfig(BaseModel):
     journals: dict[str, Feed] = {}
     news: dict[str, Feed] = {}
     funding: dict[str, Feed] = {}
+    highlights: HighlightsConfig = HighlightsConfig()
 
 
 def load_config(path: Path | None = None) -> BriefingConfig:

@@ -75,35 +75,13 @@ job_search:
   follow_up_days: 7            # reminder this many days after you apply
 
 network:
-  # People to meet: researchers and engineers at Hong Kong institutions publishing on these
-  # topics (from OpenAlex). Each phrase is matched exactly; "a + b" needs both phrases.
+  # People to meet: researchers and engineers at Hong Kong institutions publishing on your
+  # research_topics (from OpenAlex).
   suggest_day: Monday          # weekly suggestions in that morning's message
   suggest_size: 5
   years: 3                     # papers from the last 3 years count
   prefer_international: true   # careers that include institutions outside Hong Kong first
   follow_up_days: 7            # then ask whether a connection request was accepted
-  topics:
-    Water distribution & smart utilities:
-      - water distribution network
-      - water distribution system
-      - leak detection + water
-      - smart water
-    Wastewater & GHG mitigation:
-      - wastewater + greenhouse gas
-      - wastewater + nitrous oxide
-      - activated sludge
-    Groundwater & riverbank filtration:
-      - riverbank filtration
-      - groundwater + contamination
-      - managed aquifer recharge
-    AI/ML in water engineering:
-      - machine learning + water quality
-      - digital twin + water
-      - deep learning + hydraulic
-    Climate change & sustainability:
-      - urban flood + climate change
-      - stormwater
-      - sponge city
 
 budget:
   monthly_cap_hkd: 500         # all-in: AWS + AI models (about US$64)
@@ -117,3 +95,36 @@ approvals:
   # T2 one-tap approval: anything others see or that costs money (send, invite, book, pay, delete)
   # T3 never: bank transfers, sharing ID documents, changing passwords, bulk deletes
   new_recipient_always_ask: true
+
+# Your research topics, for finding people and the twice-weekly research highlights.
+# Each phrase is matched exactly in titles and abstracts; "a + b" needs both phrases.
+research_topics:
+  Water distribution & smart utilities:
+    - water distribution network
+    - water distribution system
+    - leak detection + water
+    - smart water
+  Wastewater & GHG mitigation:
+    - wastewater + greenhouse gas
+    - wastewater + nitrous oxide
+    - activated sludge
+  Groundwater & riverbank filtration:
+    - riverbank filtration
+    - groundwater + contamination
+    - managed aquifer recharge
+  AI/ML in water engineering:
+    - machine learning + water quality
+    - digital twin + water
+    - deep learning + hydraulic
+  Climate change & sustainability:
+    - urban flood + climate change
+    - stormwater
+    - sponge city
+
+documents:
+  drive_folder: Mentor         # the only Google Drive folder Mentor reads (read-only)
+
+review:
+  enabled: true
+  day: Sunday                  # weekly review: progress, slips, next week's top three
+  time: "19:00"

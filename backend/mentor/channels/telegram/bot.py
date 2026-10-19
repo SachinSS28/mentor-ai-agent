@@ -20,15 +20,17 @@ from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, NetworkError
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from mentor import morning
+from mentor import morning, review
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
 from mentor.charter import owner_timezone
 from mentor.db.heartbeat import beat
+from mentor.db.models import Task
 from mentor.db.session import get_engine
 from mentor.db.state import get_state, set_state
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
+from mentor.mcp_servers.mentor_core import tasks
 from mentor.practice import dhamma
 from mentor.settings import Host, get_settings
 
@@ -40,6 +42,7 @@ HEARTBEAT_EVERY = 30
 # The morning routine reads new job alerts and research feeds this often, and sends the 08:00
 # message (jobs + research & news) when it is due.
 JOB_DESK_EVERY = 15 * 60
+REMINDERS_EVERY = 60  # timed reminders go out within a minute
 GOOGLE_EXPIRED_TOLD_ON = "google.expired_told_on"
 
 Decision = Literal["answer", "pair", "ignore"]
@@ -216,14 +219,47 @@ def make_job_desk(
         except Exception:
             log.exception("The evening reflection failed; trying again in 15 minutes")
             evening = None
-        for text in (digest, evening):
+        try:
+            weekly = await asyncio.to_thread(review.tick, now)
+        except Exception:
+            log.exception("The weekly review failed; trying again in 15 minutes")
+            weekly = None
+        for text in (digest, evening, weekly):
             if text:
-                await send_to_owner(context.bot, chat_id, text)
-                # Part of the conversation too, so replies ("save J12", a reflection) have
-                # the message in context.
-                config: RunnableConfig = {"configurable": {"thread_id": f"telegram-{chat_id}"}}
-                update = {"messages": [AIMessage(text)]}
-                await asyncio.to_thread(graph.update_state, config, update, as_node="agent")
+                await tell_owner(graph, context.bot, chat_id, text)
+
+    return run
+
+
+async def tell_owner(graph: MentorGraph, bot: Any, chat_id: int, text: str) -> None:
+    """Sends a message Mentor starts itself and adds it to the conversation, so replies
+    ("save J12", a reflection, "done T3") have it in context."""
+    await send_to_owner(bot, chat_id, text)
+    config: RunnableConfig = {"configurable": {"thread_id": f"telegram-{chat_id}"}}
+    update = {"messages": [AIMessage(text)]}
+    await asyncio.to_thread(graph.update_state, config, update, as_node="agent")
+
+
+def reminder_text(task: Task) -> str:
+    due = f" (due {task.due.astimezone(owner_timezone()):%a %d %b %H:%M})" if task.due else ""
+    notes = f"\n{task.notes}" if task.notes else ""
+    done = f'Say "done T{task.ref}" when it\'s done.'
+    return f"⏰ **Reminder, T{task.ref}:** {task.title}{due}{notes}\n{done}"
+
+
+def make_reminders(
+    graph: MentorGraph, chat_id: int
+) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
+    async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
+        now = datetime.now(owner_timezone())
+        try:
+            due = await asyncio.to_thread(tasks.reminders_due, now)
+        except SQLAlchemyError:
+            log.exception("Couldn't check reminders; trying again in a minute")
+            return
+        for task in due:
+            await tell_owner(graph, context.bot, chat_id, reminder_text(task))
+            await asyncio.to_thread(tasks.mark_reminded, [task.ref], now)
 
     return run
 
@@ -258,5 +294,11 @@ def run_telegram_bot() -> None:
                 interval=JOB_DESK_EVERY,
                 first=60,
                 name="morning",
+            )
+            app.job_queue.run_repeating(
+                make_reminders(graph, settings.telegram_allowed_chat_id),
+                interval=REMINDERS_EVERY,
+                first=20,
+                name="reminders",
             )
         app.run_polling(allowed_updates=Update.ALL_TYPES)

@@ -51,7 +51,8 @@ def suggestions(
     config = get_charter().network
     start = since(config, now.date())
     exclude = store.known_ids() if only_new else frozenset()
-    found = experts.find(topics or config.topics, start, config.prefer_international, exclude)
+    topics = topics or get_charter().research_topics
+    found = experts.find(topics, start, config.prefer_international, exclude)
     if international_only:
         found = [c for c in found if c.abroad]
     return store.save_suggestions(found[: limit or config.suggest_size], start, now)
@@ -61,7 +62,7 @@ def section(now: datetime) -> str | None:
     """New people on the charter's suggest_day, and pending connection requests to check on."""
     config = get_charter().network
     parts = []
-    if config.topics and now.strftime("%A").lower() == config.suggest_day.lower():
+    if get_charter().research_topics and now.strftime("%A").lower() == config.suggest_day.lower():
         people = suggestions(now, only_new=True)
         if people:
             blocks = "\n".join(person_block(p) for p in people)

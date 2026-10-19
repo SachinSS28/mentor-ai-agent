@@ -27,6 +27,9 @@ SCORING_PROMPT = """You pick research and news worth {owner}'s time, as {owner}'
 assistant. Score each item from 0 to 100 for how much it matters to {owner}'s field and interests: \
 80 or more is squarely in their specializations or a notable advance, 60-79 clearly relevant, \
 below 60 marginal or off-topic (anything with no water, environment or climate angle near 0). \
+Significant news counts too: major water or climate disasters (floods, droughts, typhoons), \
+corporate sustainability (CSR, ESG) with a water or climate angle, and government climate action \
+(policy, net zero, carbon neutrality), especially in Hong Kong. \
 Give a reason of at most 15 words: what is new, and why it matters to {owner}.
 
 Answer with one line per item and nothing else, exactly like this:

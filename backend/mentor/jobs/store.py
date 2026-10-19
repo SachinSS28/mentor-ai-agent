@@ -145,6 +145,12 @@ def follow_ups_due(today: date) -> list[Job]:
         return list(session.scalars(query))
 
 
+def applied_between(start: datetime, end: datetime) -> list[Job]:
+    query = select(Job).where(Job.applied_at >= start, Job.applied_at < end)
+    with get_sessionmaker()() as session:
+        return list(session.scalars(query.order_by(Job.applied_at)))
+
+
 def counts() -> dict[str, int]:
     with get_sessionmaker()() as session:
         rows = session.execute(select(Job.status, func.count()).group_by(Job.status))
