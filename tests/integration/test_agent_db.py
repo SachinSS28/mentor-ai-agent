@@ -13,7 +13,7 @@ from tests.helpers import scripted
 
 from mentor.agent.checkpoint import open_checkpointer
 from mentor.agent.graph import ask, build_graph
-from mentor.agent.tools import list_open_tasks
+from mentor.agent.tools import list_open_tasks, recall_memories
 from mentor.db.models import Task
 from mentor.db.session import get_engine, get_sessionmaker
 
@@ -74,3 +74,9 @@ def test_conversation_survives_a_restart(system_prompt: Any) -> None:
         "[Mon 19 Oct 2026, 08:10] Where is my office?",
         "Central.",
     ]
+
+
+def test_recall_accepts_a_list_of_words_from_small_models() -> None:
+    # Gemma sometimes calls recall_memories with query=[] meaning "everything".
+    assert recall_memories.invoke({"query": []}) == recall_memories.invoke({"query": ""})
+    assert recall_memories.invoke({"query": ["CV"]}) == recall_memories.invoke({"query": "CV"})

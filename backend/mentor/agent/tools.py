@@ -120,13 +120,15 @@ def remember(fact: str, kind: Layer = "profile", replaces: str = "", private: bo
 
 
 @tool
-def recall_memories(query: str = "") -> str:
+def recall_memories(query: str | list[str] = "") -> str:
     """Look up what the owner told you before (long-term memory), with each memory's id.
 
     Use it before saying you don't know something about the owner, and when they ask what you
     remember. query: words to look for; leave empty to list everything.
     """
-    found = memory.recall(query, include_private=model_is_local())
+    # Small local models sometimes send a list of words (or [] for "everything") instead of text.
+    words = " ".join(str(word) for word in query) if isinstance(query, list) else query
+    found = memory.recall(words, include_private=model_is_local())
     if not found:
         return "Nothing saved in memory yet."
     tz = owner_timezone()

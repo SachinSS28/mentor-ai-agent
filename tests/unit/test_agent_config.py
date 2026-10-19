@@ -172,3 +172,10 @@ def test_bot_in_a_container_reaches_ollama_on_the_mac(monkeypatch: pytest.Monkey
     get_settings.cache_clear()
     assert isinstance(model, ChatOllama)
     assert model.base_url == "http://host.docker.internal:11434"
+
+
+def test_gemma_gets_a_context_window_big_enough_for_mentor() -> None:
+    # Ollama's 4,096-token default cut off Mentor's instructions once memories were recalled.
+    model = get_chat_model("orchestrator")
+    assert isinstance(model, ChatOllama)
+    assert model.num_ctx is not None and model.num_ctx >= 32768

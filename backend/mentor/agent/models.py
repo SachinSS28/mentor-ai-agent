@@ -38,6 +38,9 @@ class RoleConfig(BaseModel):
     # Ollama only. None keeps the model's default. Gemma 4 returns empty answers after tool
     # calls when thinking is switched off, so don't set false for tool-using roles.
     reasoning: bool | None = None
+    # Ollama only: the context window in tokens. Ollama's default (4,096) silently cuts off the
+    # start of longer requests, which is where Mentor's instructions are.
+    num_ctx: int | None = None
     # Gemini only: how hard the model thinks before answering ("low" is quick and cheap).
     thinking_level: Literal["minimal", "low", "medium", "high"] | None = None
     # Claude only. Effort controls how much the model thinks, so it is the main cost lever.
@@ -141,6 +144,7 @@ def get_chat_model(role: Role, config: ModelsConfig | None = None) -> BaseChatMo
             base_url=ollama_url(config),
             temperature=rc.temperature,
             reasoning=rc.reasoning,
+            num_ctx=rc.num_ctx,
         )
     if rc.provider in CLAUDE_PROVIDERS:
         return claude_model(rc, config.providers)

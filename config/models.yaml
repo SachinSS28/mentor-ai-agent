@@ -6,5 +6,7 @@ providers:
     base_url: http://127.0.0.1:11434
 
 roles:
-  orchestrator: { provider: ollama, model: "gemma4:e4b", temperature: 0.3 }
-  fast: { provider: ollama, model: "gemma4:e4b", temperature: 0 }
+  # num_ctx: Gemma 4 E4B handles 128K tokens; 32K fits the instructions, the 6,000-token history
+  # window, your saved memories and tool results with room to spare (Ollama's default is 4,096).
+  orchestrator: { provider: ollama, model: "gemma4:e4b", temperature: 0.3, num_ctx: 32768 }
+  fast: { provider: ollama, model: "gemma4:e4b", temperature: 0, num_ctx: 32768 }
