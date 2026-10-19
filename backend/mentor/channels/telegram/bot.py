@@ -20,14 +20,14 @@ from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, NetworkError
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
+from mentor import morning
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
 from mentor.charter import owner_timezone
 from mentor.db.heartbeat import beat
 from mentor.db.session import get_engine
-from mentor.jobs import desk
-from mentor.jobs import store as job_store
+from mentor.db.state import get_state, set_state
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 from mentor.settings import Host, get_settings
 
@@ -36,7 +36,8 @@ log = logging.getLogger(__name__)
 TELEGRAM_MESSAGE_LIMIT = 4096
 # The Mac's standby treats a few minutes without one as the cloud bot being down.
 HEARTBEAT_EVERY = 30
-# The Job Desk reads new job alerts this often, and sends the day's shortlist when it is due.
+# The morning routine reads new job alerts and research feeds this often, and sends the 08:00
+# message (jobs + research & news) when it is due.
 JOB_DESK_EVERY = 15 * 60
 GOOGLE_EXPIRED_TOLD_ON = "google.expired_told_on"
 
@@ -199,15 +200,15 @@ def make_job_desk(
     async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
         now = datetime.now(owner_timezone())
         try:
-            digest = await asyncio.to_thread(desk.tick, now)
+            digest = await asyncio.to_thread(morning.tick, now)
         except GoogleNotConnectedError as error:
             # Once a day is enough: the Job Desk retries every 15 minutes.
-            if job_store.get_state(GOOGLE_EXPIRED_TOLD_ON) != now.date().isoformat():
-                job_store.set_state(GOOGLE_EXPIRED_TOLD_ON, now.date().isoformat())
+            if get_state(GOOGLE_EXPIRED_TOLD_ON) != now.date().isoformat():
+                set_state(GOOGLE_EXPIRED_TOLD_ON, now.date().isoformat())
                 await send_to_owner(context.bot, chat_id, f"The Job Desk can't read Gmail: {error}")
             return
         except Exception:
-            log.exception("The Job Desk check failed; trying again in 15 minutes")
+            log.exception("The morning routine failed; trying again in 15 minutes")
             return
         if digest:
             await send_to_owner(context.bot, chat_id, digest)
@@ -249,6 +250,6 @@ def run_telegram_bot() -> None:
                 make_job_desk(graph, settings.telegram_allowed_chat_id),
                 interval=JOB_DESK_EVERY,
                 first=60,
-                name="job-desk",
+                name="morning",
             )
         app.run_polling(allowed_updates=Update.ALL_TYPES)

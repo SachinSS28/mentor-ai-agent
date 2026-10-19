@@ -392,3 +392,32 @@ class AppState(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = updated_at()
+
+
+BRIEFING_KINDS = ("paper", "journal", "news", "funding")
+
+
+class BriefingItem(Base):
+    """A paper, journal article, news story or funding call for the morning briefing. `score` is
+    0-100 relevance to the owner's profile; `why` says what's new and why it matters to them."""
+
+    __tablename__ = "briefing_items"
+    __table_args__ = (
+        one_of("kind", BRIEFING_KINDS),
+        one_of("status", ("new", "sent")),
+        CheckConstraint("score BETWEEN 0 AND 100", name="score"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    kind: Mapped[str] = mapped_column(String(16))
+    source: Mapped[str] = mapped_column(Text)  # journal or feed name
+    topic: Mapped[str | None] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text, unique=True)
+    snippet: Mapped[str | None] = mapped_column(Text)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    score: Mapped[int | None] = mapped_column(SmallInteger)
+    why: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(8), server_default="new", index=True)
+    found_at: Mapped[datetime] = created_at()
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

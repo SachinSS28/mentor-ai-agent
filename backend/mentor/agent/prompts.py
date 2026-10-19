@@ -32,7 +32,9 @@ HOST_NOTES = {
 }
 
 
-def build_system_prompt(charter: Charter, persona: str, host: Host, model: str) -> str:
+def build_system_prompt(
+    charter: Charter, persona: str, host: Host, model: str, profile: str = ""
+) -> str:
     """The same text for the whole conversation: the clock goes on each message instead, so the
     prompt stays cacheable and earlier turns stay unchanged."""
     owner = charter.owner.name
@@ -48,7 +50,13 @@ def build_system_prompt(charter: Charter, persona: str, host: Host, model: str) 
         f"{charter.owner.city}. {HOST_NOTES[host].format(owner=owner)} "
         f"Your language model is {model}."
     )
-    return f"{body.strip()}\n\n{context}"
+    about = (
+        f"\n\n{owner}'s professional profile, from their CV. Use it to tailor advice, job "
+        f"matching and research news to {owner}'s field:\n<profile>\n{profile}\n</profile>"
+        if profile
+        else ""
+    )
+    return f"{body.strip()}\n\n{context}{about}"
 
 
 def stamp(text: str, sent_at: datetime) -> str:

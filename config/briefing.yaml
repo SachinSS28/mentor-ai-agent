@@ -1,0 +1,60 @@
+# Research & news briefing: what Mentor follows for you. New items are collected every 6 hours,
+# scored by the local model against config/profile.md, and the best go into the 08:00 message
+# with the job shortlist. Edit freely; feeds that stop working are skipped and logged.
+
+min_score: 60          # 0-100 relevance to your profile; lower items are left out
+lookback_days: 3       # how far back each collection looks
+per_section:           # most items per section in the morning message
+  paper: 4
+  journal: 3
+  news: 3
+  funding: 2
+
+# New papers (OpenAlex: free scholarly index of Elsevier, ASCE, IWA, Springer, Wiley, MDPI ...).
+# Each phrase is matched in titles and abstracts of journal articles.
+papers:
+  Water distribution & smart utilities:
+    - water distribution network
+    - water supply system optimization
+    - smart water leakage detection
+  Wastewater & GHG mitigation:
+    - wastewater greenhouse gas
+    - nitrous oxide wastewater treatment
+    - activated sludge modelling
+  Groundwater & riverbank filtration:
+    - riverbank filtration
+    - groundwater microplastics
+    - groundwater pathogen transport
+  AI/ML in water engineering:
+    - machine learning hydraulic model
+    - digital twin water
+    - deep learning water quality
+  Climate change & sustainability:
+    - climate resilient water infrastructure
+    - urban flood climate change
+    - sustainable water management
+
+# Journals you follow (their official RSS feeds).
+journals:
+  Water Research: https://rss.sciencedirect.com/publication/science/00431354
+  Journal of Hydrology: https://rss.sciencedirect.com/publication/science/00221694
+  Water Research X: https://rss.sciencedirect.com/publication/science/25899147
+  Journal of Environmental Management: https://rss.sciencedirect.com/publication/science/03014797
+  Nature Water: https://www.nature.com/natwater.rss
+  ASCE J. Water Resources Planning & Management: https://ascelibrary.org/action/showFeed?type=etoc&feed=rss&jc=jwrmd5
+
+# Water-sector and Hong Kong policy news. `keywords`: keep only items mentioning one of them.
+news:
+  Water utilities & wastewater: https://news.google.com/rss/search?q=%22water%20utility%22%20OR%20wastewater%20OR%20%22water%20supply%22&hl=en-HK&gl=HK&ceid=HK:en
+  Hong Kong water departments: https://news.google.com/rss/search?q=%22Water%20Supplies%20Department%22%20OR%20%22Drainage%20Services%20Department%22&hl=en-HK&gl=HK&ceid=HK:en
+  Smart & digital water: https://news.google.com/rss/search?q=%22smart%20water%22%20OR%20%22digital%20water%22%20OR%20%22water%20technology%22&hl=en&gl=US&ceid=US:en
+  Climate-resilient infrastructure: https://news.google.com/rss/search?q=%22climate%20resilience%22%20water%20infrastructure&hl=en&gl=US&ceid=US:en
+  HKSAR Government press releases:
+    url: https://www.info.gov.hk/gia/rss/general_en.xml
+    keywords: [water, drainage, sewage, sewerage, flood, rainstorm, climate, carbon, environment]
+
+# Research funding calls and conferences.
+funding:
+  Water conferences (WikiCFP): http://www.wikicfp.com/cfp/rss?cat=water
+  Water research funding calls: https://news.google.com/rss/search?q=%22call%20for%20proposals%22%20water%20research&hl=en&gl=US&ceid=US:en
+  Hong Kong research grants: https://news.google.com/rss/search?q=%22Research%20Grants%20Council%22%20OR%20%22Innovation%20and%20Technology%20Fund%22%20Hong%20Kong&hl=en-HK&gl=HK&ceid=HK:en

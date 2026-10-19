@@ -12,8 +12,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from mentor.agent.models import get_chat_model, load_models_config
-from mentor.charter import Charter, get_charter
+from mentor.charter import Charter, get_charter, owner_profile_text
 from mentor.db.models import Job
+from mentor.db.state import get_state, set_state
 from mentor.jobs import store
 from mentor.jobs.alerts import LINKEDIN_ALERTS, parse_linkedin_alert
 from mentor.mcp_servers.google_tools import gmail
@@ -60,11 +61,13 @@ def check_alerts(days: int = ALERT_DAYS, max_emails: int = 50) -> int:
     return new
 
 
-def owner_profile(max_chars: int = 6000) -> str:
+def owner_profile(max_chars: int = 9000) -> str:
+    """The CV-based profile (config/profile.md), then goals and preferences from memory."""
     # Private memories only ever reach a model running on this machine.
     local = load_models_config().roles["fast"].provider == "ollama"
     facts = [m.fact for m in memory.recall("", include_private=local) if m.layer in PROFILE_LAYERS]
-    return "\n".join(facts)[:max_chars] or "(nothing saved yet)"
+    parts = [owner_profile_text(), "\n".join(facts)]
+    return "\n\n".join(p for p in parts if p)[:max_chars] or "(nothing saved yet)"
 
 
 def scoring_prompt(charter: Charter, profile: str) -> str:
@@ -136,15 +139,21 @@ def format_digest(jobs: Sequence[Job], follow_ups: Sequence[Job], today: date) -
     return "\n".join(lines)
 
 
-def tick(now: datetime) -> str | None:
-    """One run of the routine. Returns the day's shortlist when it is due, else None."""
-    check_alerts()
-    score_new()
+def shortlist(now: datetime) -> str | None:
+    """Today's best new jobs and due follow-ups; marks the jobs as shortlisted."""
     search = get_charter().job_search
-    if not digest_due(now, store.get_state(DIGEST_SENT_ON), search.digest_time):
-        return None
     jobs = store.digest_candidates(search.min_score, search.digest_size)
     digest = format_digest(jobs, store.follow_ups_due(now.date()), now.date())
     store.mark_shortlisted([job.ref for job in jobs], now)
-    store.set_state(DIGEST_SENT_ON, now.date().isoformat())
+    return digest
+
+
+def tick(now: datetime) -> str | None:
+    """One run of the jobs routine. Returns the day's shortlist when it is due, else None."""
+    check_alerts()
+    score_new()
+    if not digest_due(now, get_state(DIGEST_SENT_ON), get_charter().job_search.digest_time):
+        return None
+    digest = shortlist(now)
+    set_state(DIGEST_SENT_ON, now.date().isoformat())
     return digest

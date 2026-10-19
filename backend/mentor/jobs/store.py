@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 
-from mentor.db.models import JOB_STATUSES, AppState, Job, ProcessedEmail
+from mentor.db.models import JOB_STATUSES, Job, ProcessedEmail
 from mentor.db.session import get_sessionmaker
 from mentor.jobs.alerts import Posting
 
@@ -149,24 +149,6 @@ def counts() -> dict[str, int]:
     with get_sessionmaker()() as session:
         rows = session.execute(select(Job.status, func.count()).group_by(Job.status))
         return {status: n for status, n in rows}
-
-
-def get_state(key: str) -> str | None:
-    with get_sessionmaker()() as session:
-        state = session.get(AppState, key)
-        return state.value if state else None
-
-
-def set_state(key: str, value: str) -> None:
-    with get_sessionmaker()() as session:
-        session.execute(
-            insert(AppState)
-            .values(key=key, value=value)
-            .on_conflict_do_update(
-                index_elements=[AppState.key], set_={"value": value, "updated_at": func.now()}
-            )
-        )
-        session.commit()
 
 
 def search_text(job: Job) -> str:

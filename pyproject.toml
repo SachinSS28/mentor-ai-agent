@@ -7,6 +7,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "alembic>=1.20.0",
     "fastmcp>=4.1.0",
+    "feedparser>=6.0.14",
     "google-api-python-client>=2.201.0",
     "google-auth>=2.62.0",
     "google-auth-oauthlib>=1.5.0",
@@ -68,7 +69,7 @@ exclude = ["backend/mentor/db/migrations/"]  # generated code
 
 # Google's client libraries ship without type information.
 [[tool.mypy.overrides]]
-module = ["googleapiclient.*", "google_auth_oauthlib.*"]
+module = ["googleapiclient.*", "google_auth_oauthlib.*", "feedparser"]
 ignore_missing_imports = true
 
 # google-auth's Credentials methods are unannotated; allow calling them only here.

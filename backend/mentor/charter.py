@@ -49,6 +49,13 @@ def load_charter(path: Path | None = None) -> Charter:
 
 
 @lru_cache
+def owner_profile_text() -> str:
+    """config/profile.md: the owner's professional profile from their CV, or "" if not written."""
+    path = get_settings().config_dir / "profile.md"
+    return path.read_text().strip() if path.exists() else ""
+
+
+@lru_cache
 def get_charter() -> Charter:
     return load_charter()
 

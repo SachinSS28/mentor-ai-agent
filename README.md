@@ -40,6 +40,8 @@ uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_
 
 **Job Desk:** Mentor reads your LinkedIn job-alert emails every 15 minutes, numbers each job (J12), scores it against your profile and the `job_search` section of `config/charter.yaml`, and sends a shortlist on Telegram at 08:00. Reply "save J12", "applied J12" or "cover letter for J12"; emails to recruiters are saved as Gmail drafts, never sent.
 
+**Research & news:** every 6 hours Mentor collects new papers, journal articles, water-sector news and funding calls (sources in `config/briefing.yaml`), scores them against your CV profile (`config/profile.md`), and adds the best to the 08:00 message. Ask any time: "any new papers on riverbank filtration?"
+
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
 ## Always-on server (Google Cloud): paused

@@ -179,3 +179,20 @@ def test_gemma_gets_a_context_window_big_enough_for_mentor() -> None:
     model = get_chat_model("orchestrator")
     assert isinstance(model, ChatOllama)
     assert model.num_ctx is not None and model.num_ctx >= 32768
+
+
+def test_system_prompt_carries_the_cv_profile_when_there_is_one() -> None:
+    persona = (get_settings().config_dir / "persona.md").read_text()
+    profile = "## Specializations\n- Water distribution network optimization"
+    prompt = build_system_prompt(load_charter(), persona, "mac", "gemma4:e4b", profile)
+    assert "Sachin's professional profile, from their CV" in prompt
+    assert prompt.rstrip().endswith("</profile>") and "Water distribution network" in prompt
+    assert "<profile>" not in build_system_prompt(load_charter(), persona, "mac", "gemma4:e4b")
+
+
+def test_the_real_profile_file_has_no_contact_details() -> None:
+    from mentor.charter import owner_profile_text
+
+    profile = owner_profile_text()
+    assert "Specializations" in profile
+    assert "+852" not in profile and "@" not in profile  # no phone numbers or email addresses

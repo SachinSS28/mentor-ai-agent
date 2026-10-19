@@ -18,6 +18,7 @@ EXPECTED_TABLES = {
     "jobs",
     "processed_emails",
     "app_state",
+    "briefing_items",
     "heartbeats",
 }
 
