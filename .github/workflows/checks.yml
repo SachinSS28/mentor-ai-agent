@@ -1,0 +1,41 @@
+# Lint, type checks and tests on every pull request and every push to main.
+# main only accepts pull requests that pass this job (the "checks" status).
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only: the job needs no secrets and can't change the repo.
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      # Same database as infra/docker-compose.yml, so the integration tests run too.
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: mentor
+          POSTGRES_USER: mentor
+          POSTGRES_PASSWORD: mentor-local-only
+        ports: ["127.0.0.1:5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mentor -d mentor"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      # Actions pinned to release commits.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: uv run alembic upgrade head
+      - run: uv run pytest -q
