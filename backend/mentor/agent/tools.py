@@ -5,8 +5,10 @@ From Phase 1 these move into MCP servers (mentor-core, google-tools) behind Sent
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from typing import cast, get_args
 from zoneinfo import ZoneInfo
 
+import httpx
 from langchain_core.tools import BaseTool, tool
 from sqlalchemy import select
 
@@ -20,6 +22,7 @@ from mentor.mcp_servers.google_tools import calendar, gmail
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 from mentor.mcp_servers.mentor_core import memory
 from mentor.mcp_servers.mentor_core.memory import Layer
+from mentor.mcp_servers.web_tools import search as web
 from mentor.network import desk as network
 from mentor.network import store as contacts
 
@@ -348,6 +351,48 @@ def list_contacts(query: str = "", status: str = "", limit: int = 15) -> str:
     return "\n".join(format_contact(p) for p in people)
 
 
+@tool
+def search_web(query: str, recent: str = "", news: bool = False, max_results: int = 5) -> str:
+    """Search the web for current information that isn't in the owner's own data: companies and
+    organizations, events and conferences, public pages about people, news, prices, facts.
+    Returns titles, links and snippets.
+
+    query: what to look for, e.g. "water engineering consultancies Hong Kong".
+    recent: day, week, month or year to keep to recent pages; empty for any time.
+    news: true for news articles.
+    """
+    period = recent.strip().lower() or None
+    if period not in (None, *get_args(web.TimeRange)):
+        return "Not searched: recent must be day, week, month, year or empty."
+    try:
+        results = web.search(query, max_results, news, cast(web.TimeRange | None, period))
+    except (web.WebNotConnectedError, web.WebLimitError) as error:
+        return str(error)
+    except httpx.HTTPError:
+        return "Web search isn't answering right now; try again in a minute."
+    if not results:
+        return f"Nothing found on the web for {query!r}."
+    return web.format_results(results)
+
+
+@tool
+def read_webpage(url: str, question: str = "") -> str:
+    """Read the text of a web page, e.g. a result from search_web, to answer from it.
+
+    question: what you are looking for; for a long page this returns the most relevant parts.
+    LinkedIn pages can't be read.
+    """
+    if web.is_blocked(url):
+        return "LinkedIn pages can't be read; give the owner the link to open."
+    try:
+        text = web.read(url.strip(), question)
+    except (web.WebNotConnectedError, web.WebLimitError, ValueError) as error:
+        return str(error)
+    except httpx.HTTPError:
+        return "Web reading isn't answering right now; try again in a minute."
+    return web.untrusted(f"Page: {url}\n{text}")
+
+
 TOOLS: list[BaseTool] = [
     list_open_tasks,
     list_calendar_events,
@@ -363,4 +408,6 @@ TOOLS: list[BaseTool] = [
     find_experts,
     track_contact,
     list_contacts,
+    search_web,
+    read_webpage,
 ]

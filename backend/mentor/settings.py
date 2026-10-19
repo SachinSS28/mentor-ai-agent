@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     ollama_url: str | None = None
     gemini_api_key: SecretStr | None = None
     anthropic_api_key: SecretStr | None = None
+    # Web search and page reading (Tavily's free plan: 1,000 credits a month, no card).
+    tavily_api_key: SecretStr | None = None
     telegram_bot_token: SecretStr | None = None
     telegram_allowed_chat_id: int | None = None
     # Outside the repo, owner-only permissions; Secrets Manager from Phase 1.

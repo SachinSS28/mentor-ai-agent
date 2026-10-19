@@ -46,6 +46,8 @@ uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_
 
 **Networking:** ask "who should I meet in Hong Kong working on leak detection?" and Mentor finds researchers and engineers at Hong Kong institutions publishing on it (from OpenAlex), each numbered like P12 with their latest paper, career record and a LinkedIn search link. Every Monday the 08:00 message suggests five new people. Reply "note for P12" for a connection note, and "invited P12" or "met P12" to keep track. Topics are in the `network` section of `config/charter.yaml`. Mentor never acts on LinkedIn; you connect.
 
+**Web search:** Mentor searches the web and reads pages for anything beyond your own data: companies, events, news, people's public work pages. It uses Tavily's free plan (1,000 searches a month, no card), with the key in `.env` as `MENTOR_TAVILY_API_KEY`. It never reads LinkedIn pages.
+
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
 ## Always-on server (Google Cloud): paused
