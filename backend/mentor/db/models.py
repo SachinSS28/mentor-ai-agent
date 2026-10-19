@@ -136,15 +136,43 @@ class Routine(Base):
     updated_at: Mapped[datetime] = updated_at()
 
 
+CONTACT_STATUSES = (
+    "suggested",  # found by Mentor, not acted on yet
+    "to_contact",
+    "invited",  # connection request sent
+    "connected",
+    "replied",
+    "met",
+    "not_now",
+)
+
+
 class Person(Base):
+    """Someone in the owner's world. Networking contacts carry an `outreach` status; `ref` is the
+    short P-number shown to the owner ("invited P12"). Mentor's suggestions come from OpenAlex."""
+
     __tablename__ = "people"
+    __table_args__ = (
+        UniqueConstraint("source", "external_id", name="uq_people_source_external_id"),
+        one_of("source", ("owner", "openalex")),
+        one_of("outreach", CONTACT_STATUSES),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
+    ref: Mapped[int] = mapped_column(BigInteger, Identity(), unique=True)
     name: Mapped[str] = mapped_column(Text)
     relationship: Mapped[str | None] = mapped_column(Text)
+    organization: Mapped[str | None] = mapped_column(Text)
     workspace_id: Mapped[str | None] = workspace_fk()
     email: Mapped[str | None] = mapped_column(Text)
     timezone: Mapped[str | None] = mapped_column(String(64))
+    source: Mapped[str] = mapped_column(String(16), server_default="owner")
+    external_id: Mapped[str | None] = mapped_column(Text)  # OpenAlex author id
+    profile_url: Mapped[str | None] = mapped_column(Text)  # ORCID or OpenAlex page
+    about: Mapped[str | None] = mapped_column(Text)  # why Mentor suggested them
+    outreach: Mapped[str | None] = mapped_column(String(16), index=True)
+    suggested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    follow_up_on: Mapped[date | None] = mapped_column(Date)
     last_contact: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = created_at()

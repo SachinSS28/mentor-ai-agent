@@ -44,6 +44,17 @@ class PracticeConfig(BaseModel):
     uposatha: list[str] = ["new moon", "full moon"]
 
 
+class NetworkConfig(BaseModel):
+    """People to meet: who to look for (topics as phrases; "a + b" needs both), and when."""
+
+    suggest_day: str = "Monday"  # weekly suggestions join that day's morning message
+    suggest_size: int = 5
+    years: int = 3  # papers from this many years back count
+    prefer_international: bool = True  # careers that include institutions outside Hong Kong first
+    follow_up_days: int = 7  # ask whether a connection request was accepted
+    topics: dict[str, list[str]] = {}
+
+
 class Charter(BaseModel):
     # Sections not used yet (workspaces, goals, budget, ...) are kept as plain data.
     model_config = ConfigDict(extra="allow")
@@ -52,6 +63,7 @@ class Charter(BaseModel):
     owner: OwnerConfig
     job_search: JobSearchConfig = JobSearchConfig()
     practice: PracticeConfig = PracticeConfig()
+    network: NetworkConfig = NetworkConfig()
 
 
 def load_charter(path: Path | None = None) -> Charter:

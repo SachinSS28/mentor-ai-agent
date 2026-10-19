@@ -74,6 +74,37 @@ job_search:
   digest_size: 8
   follow_up_days: 7            # reminder this many days after you apply
 
+network:
+  # People to meet: researchers and engineers at Hong Kong institutions publishing on these
+  # topics (from OpenAlex). Each phrase is matched exactly; "a + b" needs both phrases.
+  suggest_day: Monday          # weekly suggestions in that morning's message
+  suggest_size: 5
+  years: 3                     # papers from the last 3 years count
+  prefer_international: true   # careers that include institutions outside Hong Kong first
+  follow_up_days: 7            # then ask whether a connection request was accepted
+  topics:
+    Water distribution & smart utilities:
+      - water distribution network
+      - water distribution system
+      - leak detection + water
+      - smart water
+    Wastewater & GHG mitigation:
+      - wastewater + greenhouse gas
+      - wastewater + nitrous oxide
+      - activated sludge
+    Groundwater & riverbank filtration:
+      - riverbank filtration
+      - groundwater + contamination
+      - managed aquifer recharge
+    AI/ML in water engineering:
+      - machine learning + water quality
+      - digital twin + water
+      - deep learning + hydraulic
+    Climate change & sustainability:
+      - urban flood + climate change
+      - stormwater
+      - sponge city
+
 budget:
   monthly_cap_hkd: 500         # all-in: AWS + AI models (about US$64)
   alert_at: [0.5, 0.8, 1.0]

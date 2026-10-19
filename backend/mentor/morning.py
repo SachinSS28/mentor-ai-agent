@@ -1,4 +1,4 @@
-"""The 08:00 message: Dhamma for the day, the job shortlist, and research & news.
+"""The 08:00 message: Dhamma for the day, the job shortlist, research & news, people to meet.
 
 The Telegram bot runs `tick` every 15 minutes. The message goes out once a day at the charter's
 digest_time, or at the first tick after it (e.g. when the Mac wakes up later).
@@ -11,6 +11,7 @@ from mentor.briefing import digest as briefing
 from mentor.charter import get_charter
 from mentor.db.state import get_state, set_state
 from mentor.jobs import desk
+from mentor.network import desk as network
 from mentor.practice import dhamma
 
 log = logging.getLogger(__name__)
@@ -39,5 +40,9 @@ def tick(now: datetime) -> str | None:
         parts.append(briefing.section(now))
     except Exception:
         log.exception("Briefing section failed; sending the job shortlist alone")
+    try:
+        parts.append(network.section(now))
+    except Exception:
+        log.exception("People section failed; sending the rest")
     set_state(desk.DIGEST_SENT_ON, now.date().isoformat())
     return "\n\n".join(part for part in parts if part) or None

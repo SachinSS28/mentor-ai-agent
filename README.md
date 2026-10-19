@@ -44,6 +44,8 @@ uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_
 
 **Dhamma practice:** the 08:00 message opens with a teaching from the Pali Canon and a practice for the day (paraphrases in `config/dhamma.yaml`), at 21:30 Mentor sends an evening reflection prompt, and full and new moon Uposatha days are announced the evening before and on the day. Times and switches are in the `practice` section of `config/charter.yaml`.
 
+**Networking:** ask "who should I meet in Hong Kong working on leak detection?" and Mentor finds researchers and engineers at Hong Kong institutions publishing on it (from OpenAlex), each numbered like P12 with their latest paper, career record and a LinkedIn search link. Every Monday the 08:00 message suggests five new people. Reply "note for P12" for a connection note, and "invited P12" or "met P12" to keep track. Topics are in the `network` section of `config/charter.yaml`. Mentor never acts on LinkedIn; you connect.
+
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
 ## Always-on server (Google Cloud): paused
