@@ -1,8 +1,10 @@
 """Agent pieces against the local Postgres: the tasks tool and persistent conversation memory."""
 
 from collections.abc import Iterator
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import delete, text
@@ -14,6 +16,8 @@ from mentor.agent.graph import ask, build_graph
 from mentor.agent.tools import list_open_tasks
 from mentor.db.models import Task
 from mentor.db.session import get_engine, get_sessionmaker
+
+SENT = datetime(2026, 10, 19, 8, 10, tzinfo=ZoneInfo("Asia/Hong_Kong"))
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -55,17 +59,18 @@ def test_conversation_survives_a_restart(system_prompt: Any) -> None:
             build_graph(scripted("Noted."), [], system_prompt, saver),
             "My office is in Central.",
             thread,
+            SENT,
         )
 
     with open_checkpointer() as saver:  # a fresh process would reconnect the same way
         graph = build_graph(scripted("Central."), [], system_prompt, saver)
-        ask(graph, "Where is my office?", thread)
+        ask(graph, "Where is my office?", thread, SENT)
         history = graph.get_state({"configurable": {"thread_id": thread}}).values["messages"]
         saver.delete_thread(thread)
 
     assert [m.text for m in history] == [
-        "My office is in Central.",
+        "[Mon 19 Oct 2026, 08:10] My office is in Central.",
         "Noted.",
-        "Where is my office?",
+        "[Mon 19 Oct 2026, 08:10] Where is my office?",
         "Central.",
     ]

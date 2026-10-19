@@ -1,7 +1,18 @@
-# Local stack on the Mac (OrbStack). Ports bind to localhost only.
+# Mentor on the Mac (OrbStack): Postgres + the Telegram bot. Ports bind to localhost only.
 # Postgres also serves as the job queue, lock store and LangGraph checkpointer (no Redis).
-# api, worker and sentinel services are added here as they're built.
+# Gemma runs in Ollama on the Mac itself (a login service), so it keeps the Mac's GPU; the bot
+# reaches it at host.docker.internal. Everything here restarts with OrbStack at login.
+#
+#   docker compose -f infra/docker-compose.yml up -d --build   start or update Mentor
+#   docker compose -f infra/docker-compose.yml logs -f telegram follow the bot
 name: mentor
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+x-database: &database
+  MENTOR_DATABASE_URL: postgresql+psycopg://mentor:mentor-local-only@postgres:5432/mentor
 
 services:
   postgres:
@@ -10,7 +21,7 @@ services:
     environment:
       POSTGRES_DB: mentor
       POSTGRES_USER: mentor
-      POSTGRES_PASSWORD: mentor-local-only # local dev only; AWS uses an RDS-managed secret
+      POSTGRES_PASSWORD: mentor-local-only # local only; AWS uses an RDS-managed secret
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -20,6 +31,34 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    logging: *logging
+
+  migrate:
+    build: { context: .., dockerfile: Dockerfile }
+    image: mentor:mac
+    entrypoint: ["alembic", "upgrade", "head"]
+    environment: *database
+    depends_on:
+      postgres: { condition: service_healthy }
+    logging: *logging
+
+  telegram:
+    image: mentor:mac
+    command: ["telegram"]
+    restart: unless-stopped
+    env_file: ../.env # bot token and allowed chat ID
+    environment:
+      <<: *database
+      MENTOR_HOST: mac
+      MENTOR_MODELS_FILE: models.yaml
+      MENTOR_OLLAMA_URL: http://host.docker.internal:11434
+      MENTOR_GOOGLE_TOKEN_PATH: /secrets/google_token.json
+      MENTOR_GOOGLE_CLIENT_SECRET_PATH: /secrets/google_client_secret.json
+    volumes:
+      - ${HOME}/.config/mentor:/secrets # the Google sign-in, owner-only on the Mac
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    logging: *logging
 
 volumes:
   pgdata:

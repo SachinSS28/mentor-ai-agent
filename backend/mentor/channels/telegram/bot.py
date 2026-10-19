@@ -11,6 +11,7 @@ from datetime import UTC, datetime, time, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
+import anthropic
 from sqlalchemy.exc import SQLAlchemyError
 from telegram import Message, Update
 from telegram.constants import ChatAction, ParseMode
@@ -88,7 +89,42 @@ def quota_reset_time(now: datetime) -> str:
     return f"{midnight.astimezone(owner_timezone()):%H:%M}"
 
 
+def claude_error_reply(error: BaseException) -> str | None:
+    """What to tell the owner when the Claude API fails in a way they can act on."""
+    if isinstance(error, anthropic.AuthenticationError | anthropic.PermissionDeniedError):
+        return (
+            "Claude refused my sign-in. On Google Cloud, check that Claude is enabled in Vertex "
+            "AI Model Garden and that the server's service account has the Vertex AI User role."
+        )
+    if isinstance(error, anthropic.NotFoundError):
+        return (
+            "Claude's model isn't available to me. Check that it is enabled in Vertex AI Model "
+            "Garden for this project."
+        )
+    if isinstance(error, anthropic.RateLimitError):
+        return "I've hit Claude's rate limit. Please try again in a minute."
+    if isinstance(error, anthropic.BadRequestError):
+        detail = str(error).lower()
+        if "credit balance" in detail:
+            return (
+                "My Claude API credits have run out. Top up at platform.claude.com "
+                "(Settings, Billing), then try again."
+            )
+        if "usage limit" in detail:
+            return (
+                "This month's Claude spending limit is reached. Raise it at platform.claude.com "
+                "(Settings, Limits) or wait for the next month."
+            )
+    if isinstance(error, anthropic.APIStatusError) and error.status_code >= 500:
+        return "Claude is overloaded right now. Please try again in a few minutes."
+    if isinstance(error, anthropic.APIConnectionError):
+        return "I couldn't reach Claude's servers. Please try again in a minute."
+    return None
+
+
 def error_reply(error: BaseException | None) -> str:
+    if error and (claude := claude_error_reply(error)):
+        return claude
     # Gemini's free tier caps requests per minute and per day.
     if error and "RESOURCE_EXHAUSTED" in str(error):
         return (

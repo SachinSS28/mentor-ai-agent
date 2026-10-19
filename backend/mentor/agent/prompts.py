@@ -32,9 +32,9 @@ HOST_NOTES = {
 }
 
 
-def build_system_prompt(
-    charter: Charter, persona: str, now: datetime, host: Host, model: str
-) -> str:
+def build_system_prompt(charter: Charter, persona: str, host: Host, model: str) -> str:
+    """The same text for the whole conversation: the clock goes on each message instead, so the
+    prompt stays cacheable and earlier turns stay unchanged."""
     owner = charter.owner.name
     body = persona.format(
         assistant_name=charter.assistant.name,
@@ -43,8 +43,13 @@ def build_system_prompt(
         tone_rule=TONE_RULES[charter.assistant.coaching_tone].format(owner=owner),
     )
     context = (
-        f"Now: {now:%A %d %B %Y, %H:%M} ({charter.owner.timezone}). "
-        f"{owner} is based in {charter.owner.city}. "
-        f"{HOST_NOTES[host].format(owner=owner)} Your language model is {model}."
+        f"Each message from {owner} starts with the date and time it was sent, in "
+        f"{owner}'s time zone ({charter.owner.timezone}). {owner} is based in "
+        f"{charter.owner.city}. {HOST_NOTES[host].format(owner=owner)} "
+        f"Your language model is {model}."
     )
     return f"{body.strip()}\n\n{context}"
+
+
+def stamp(text: str, sent_at: datetime) -> str:
+    return f"[{sent_at:%a %d %b %Y, %H:%M}] {text}"

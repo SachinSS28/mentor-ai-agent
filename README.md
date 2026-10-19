@@ -16,31 +16,43 @@ uv run pre-commit install   # lint, type-check and secret checks on every commit
 uv run pytest
 ```
 
+## Run Mentor on the Mac (OrbStack)
+
+Mentor runs entirely on the Mac (plan D23): Postgres and the Telegram bot in OrbStack, Gemma 4 in
+Ollama on the Mac itself so it keeps the GPU. It answers while the Mac is on and awake. With
+OrbStack set to start at login and Ollama installed as a login service (`brew services start
+ollama`), Mentor comes back by itself after a restart.
+
+```sh
+docker compose -f infra/docker-compose.yml up -d --build   # start Mentor, or update it after a code change
+docker compose -f infra/docker-compose.yml logs -f telegram # follow the bot
+```
+
 ## Talk to Mentor
 
-Needs the local database (above) and Ollama running with Gemma 4 (`ollama serve`).
+From the terminal as well as Telegram; needs the database (above) and Ollama running with Gemma 4.
 
 ```sh
 uv run mentor chat            # terminal chat; the conversation is remembered between runs
 uv run mentor chat --new      # start a fresh conversation
-uv run mentor telegram        # Telegram bot; needs MENTOR_TELEGRAM_BOT_TOKEN in .env (see .env.example)
+uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_BOT_TOKEN in .env (see .env.example)
 ```
 
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
-## Always-on server (Google Cloud, until AWS)
+## Always-on server (Google Cloud): paused
 
-The Telegram bot runs on a free-tier Google Cloud server with Gemini, so it answers while the Mac sleeps (plan D20). Telegram allows one bot connection, so deploying stops the Mac's bot service. Set `MENTOR_GCP_PROJECT` in `.env` to your Google Cloud project ID first.
+**Stopped since 19 Oct (plan D23)**; its disk is kept. It ran the bot on a free-tier Google Cloud server so Mentor answered while the Mac slept (plan D20). `config/models.cloud.yaml` now uses Claude via the Anthropic API (needs paid API credits and `MENTOR_ANTHROPIC_API_KEY`); switch it back to a Gemini or Vertex AI role first if you restart the server without credits. To bring it back: `gcloud compute instances start mentor --zone us-west1-b`, stop the Mac's bot (`docker compose -f infra/docker-compose.yml stop telegram`), then deploy. Set `MENTOR_GCP_PROJECT` in `.env` to your Google Cloud project ID first.
 
 ```sh
 infra/gcp/create-server.sh      # once: server, network, daily disk snapshot, budget alert, Gemini API key (needs billing linked)
-infra/gcp/deploy.sh secrets     # copy the bot token, chat ID and Gemini key from .env
+infra/gcp/deploy.sh secrets     # copy the bot token, chat ID, project ID and API keys from .env
 infra/gcp/deploy.sh google-token  # copy the Google sign-in; repeat after each `uv run mentor google-auth`
 infra/gcp/deploy.sh             # build on the Mac, upload, (re)start; run after every code change
 infra/gcp/deploy.sh logs        # follow the bot's log
 ```
 
-**If the server goes down, the Mac takes over** (plan D21). The standby checks the server's bot every minute; if it goes silent (about 4 minutes without a heartbeat) or the server stops, the Mac starts the same Telegram bot on the local model and says so in the chat. When the server is back, it copies the conversation over, hands back and says so. Conversations and memories sync every 5 minutes, so both know the same things. The Mac must be awake and online.
+**Standby (retired 19 Oct, while the Mac is Mentor's only home):** when the server ran, the Mac could take over if it went down (plan D21). The standby checks the server's bot every minute; if it goes silent (about 4 minutes without a heartbeat) or the server stops, the Mac starts the same Telegram bot on the local model and says so in the chat. When the server is back, it copies the conversation over, hands back and says so. Conversations and memories sync every 5 minutes, so both know the same things. The Mac must be awake and online.
 
 ```sh
 infra/launchd/mentor-service.sh standby   # once: run the standby at login (log: ~/Library/Logs/Mentor/standby.log)
@@ -52,6 +64,6 @@ uv run mentor sync                        # sync conversations and memories with
 1. Work on a branch and open a pull request. GitHub runs the checks (lint, types, tests with a real Postgres), and `main` takes a pull request once the checks pass and the owner approves it.
 2. Use your own accounts in your own `.env` (copy `.env.example`; git never stores it):
    - **Telegram:** create your own bot with @BotFather. Never run Mentor with someone else's bot token: Telegram lets only one copy of a bot connect, so yours would knock theirs offline.
-   - **Model:** Ollama with Gemma 4 on your machine (the default, free), or your own Gemini key with `MENTOR_MODELS_FILE=models.cloud.yaml`.
+   - **Model:** Ollama with Gemma 4 on your machine (the default, free), or Claude with your own Anthropic API key and credits (`MENTOR_MODELS_FILE=models.cloud.yaml`).
    - **Google (optional):** your own OAuth client in your own Google Cloud project, saved as `~/.config/mentor/google_client_secret.json`, then `uv run mentor google-auth`.
 3. Run `uv run pre-commit install` once, so the same checks and a secret scan run before each commit.

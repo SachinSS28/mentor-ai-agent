@@ -5,6 +5,8 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
+import anthropic
+import httpx2
 import pytest
 from telegram import Update
 from telegram.error import BadRequest, NetworkError
@@ -109,3 +111,45 @@ def test_failures_are_not_reported_to_other_chats() -> None:
     update = message_from(99)
     handle_error(update, RuntimeError("boom"))
     update.effective_message.reply_text.assert_not_awaited()
+
+
+def claude_error(cls: type[anthropic.APIStatusError], status: int, message: str) -> Exception:
+    request = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    return cls(message, response=httpx2.Response(status, request=request), body=None)
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (claude_error(anthropic.RateLimitError, 429, "rate limited"), "Claude's rate limit"),
+        (
+            claude_error(anthropic.BadRequestError, 400, "Your credit balance is too low"),
+            "credits have run out",
+        ),
+        (
+            claude_error(
+                anthropic.BadRequestError, 400, "You have reached your specified API usage limits"
+            ),
+            "spending limit is reached",
+        ),
+        (claude_error(anthropic.PermissionDeniedError, 403, "denied"), "refused my sign-in"),
+        (claude_error(anthropic.NotFoundError, 404, "model not found"), "isn't available to me"),
+        (claude_error(anthropic.InternalServerError, 529, "Overloaded"), "overloaded"),
+        (
+            anthropic.APIConnectionError(
+                request=httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+            ),
+            "couldn't reach Claude",
+        ),
+    ],
+)
+def test_owner_hears_why_claude_failed(error: Exception, expected: str) -> None:
+    update = message_from(42)
+    handle_error(update, error)
+    assert expected in update.effective_message.reply_text.await_args.args[0]
+
+
+def test_other_bad_requests_get_the_generic_reply() -> None:
+    update = message_from(42)
+    handle_error(update, claude_error(anthropic.BadRequestError, 400, "messages: invalid"))
+    assert "BadRequestError" in update.effective_message.reply_text.await_args.args[0]

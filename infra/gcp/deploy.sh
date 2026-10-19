@@ -2,7 +2,7 @@
 # Builds Mentor on the Mac and runs it on the Google Cloud server (plan D20).
 #
 # Usage:  infra/gcp/deploy.sh                build, upload and (re)start Mentor
-#         infra/gcp/deploy.sh secrets        copy the bot token, chat ID and Gemini key from .env
+#         infra/gcp/deploy.sh secrets        copy the bot token, chat ID and project ID from .env
 #         infra/gcp/deploy.sh google-token   copy the Google sign-in (again after each
 #                                            `uv run mentor google-auth`)
 #         infra/gcp/deploy.sh logs           follow the bot's log
@@ -10,12 +10,18 @@ set -euo pipefail
 source "$(dirname "$0")/config.sh"
 
 secrets() {
-  local token chat key
+  local token chat key gemini
   token=$(env_value MENTOR_TELEGRAM_BOT_TOKEN)
   chat=$(env_value MENTOR_TELEGRAM_ALLOWED_CHAT_ID)
-  key=$(env_value MENTOR_GEMINI_API_KEY)
-  [ -n "$token" ] && [ -n "$chat" ] && [ -n "$key" ] ||
-    die "Set MENTOR_TELEGRAM_BOT_TOKEN, MENTOR_TELEGRAM_ALLOWED_CHAT_ID and MENTOR_GEMINI_API_KEY in .env"
+  # Optional: only needed if a role in models.cloud.yaml uses the Anthropic API or Gemini. Claude
+  # on Vertex AI signs in with the server's Google identity instead.
+  key=$(env_value MENTOR_ANTHROPIC_API_KEY)
+  gemini=$(env_value MENTOR_GEMINI_API_KEY)
+  [ -n "$token" ] && [ -n "$chat" ] ||
+    die "Set MENTOR_TELEGRAM_BOT_TOKEN and MENTOR_TELEGRAM_ALLOWED_CHAT_ID in .env"
+  if grep -q "provider: anthropic" "$REPO_ROOT/config/models.cloud.yaml" && [ -z "$key" ]; then
+    die "config/models.cloud.yaml uses the Anthropic API: set MENTOR_ANTHROPIC_API_KEY in .env"
+  fi
   # Sent over SSH stdin, so the values never appear in a command line. The database password
   # is made on the server the first time and kept after that.
   on_server sudo bash -s <<SCRIPT
@@ -29,7 +35,9 @@ POSTGRES_PASSWORD=\$pw
 MENTOR_DATABASE_URL=postgresql+psycopg://mentor:\$pw@postgres:5432/mentor
 MENTOR_TELEGRAM_BOT_TOKEN=$token
 MENTOR_TELEGRAM_ALLOWED_CHAT_ID=$chat
-MENTOR_GEMINI_API_KEY=$key
+MENTOR_GCP_PROJECT=$PROJECT
+MENTOR_ANTHROPIC_API_KEY=$key
+MENTOR_GEMINI_API_KEY=$gemini
 ENV
 SCRIPT
   echo "Secrets updated on the server. Run infra/gcp/deploy.sh to restart Mentor with them."

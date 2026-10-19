@@ -7,7 +7,7 @@ import httpx
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-from mentor.agent.models import load_models_config
+from mentor.agent.models import load_models_config, ollama_url
 from mentor.db.session import get_engine
 from mentor.settings import get_settings
 
@@ -27,8 +27,12 @@ def not_ready() -> str | None:
     providers = {role.provider for role in config.roles.values()}
     if "gemini" in providers and get_settings().gemini_api_key is None:
         return "MENTOR_GEMINI_API_KEY is not set (see .env.example)."
+    if "anthropic" in providers and get_settings().anthropic_api_key is None:
+        return "MENTOR_ANTHROPIC_API_KEY is not set (see .env.example)."
+    if "vertex" in providers and get_settings().gcp_project is None:
+        return "MENTOR_GCP_PROJECT is not set (the Google Cloud project for Vertex AI)."
     if "ollama" in providers:
-        base_url = config.providers["ollama"]["base_url"]
+        base_url = ollama_url(config)
         try:
             httpx.get(f"{base_url}/api/version", timeout=3).raise_for_status()
         except httpx.HTTPError:

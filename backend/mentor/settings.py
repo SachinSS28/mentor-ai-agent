@@ -30,7 +30,11 @@ class Settings(BaseSettings):
     gcp_project: str | None = None
     gcp_zone: str = "us-west1-b"
     gcp_server: str = "mentor"
+    # Overrides models.yaml's Ollama address, e.g. http://host.docker.internal:11434 when the bot
+    # runs in a container on the Mac and Ollama runs on the Mac itself (for its GPU).
+    ollama_url: str | None = None
     gemini_api_key: SecretStr | None = None
+    anthropic_api_key: SecretStr | None = None
     telegram_bot_token: SecretStr | None = None
     telegram_allowed_chat_id: int | None = None
     # Outside the repo, owner-only permissions; Secrets Manager from Phase 1.

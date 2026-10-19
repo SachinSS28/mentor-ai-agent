@@ -1,10 +1,17 @@
-# Which model plays each role on the Google Cloud server (plan D20).
+# Which model plays each role on the Google Cloud server (plan D20, D22).
 # Selected with MENTOR_MODELS_FILE=models.cloud.yaml; the Mac keeps models.yaml (Gemma via Ollama).
-# The API key is on the free tier (your choice, 17 Oct): Google may use these prompts, including
-# email and calendar content, to improve its products. A billing-linked key stops that.
-providers: {}
+# Claude via the Anthropic API (MENTOR_ANTHROPIC_API_KEY), paid per use with no daily cap. It
+# replaced Gemini's free tier on 19 Oct, which allowed only 20 requests a day.
+# The Vertex AI route (provider: vertex, billed to Google Cloud, no key) is built and tested, but
+# Google denied Claude quota to the new billing account on 19 Oct; switch back here if it's granted.
+providers:
+  vertex:
+    region: global
 
 roles:
-  # No temperature: current Gemini Flash models only run at their fixed default.
-  orchestrator: { provider: gemini, model: "gemini-3.8-flash", temperature: null, thinking_level: low }
-  fast: { provider: gemini, model: "gemini-3.5-flash-lite", temperature: null, thinking_level: minimal }
+  # effort: low suits chat with a few tool calls and keeps cost down; raise to medium if answers
+  # need more depth. Current Claude models reject a custom temperature. fallbacks: if Claude
+  # declines a request, Anthropic's recommended fallback model answers instead.
+  orchestrator: { provider: anthropic, model: "claude-opus-5-5", temperature: null, effort: low, fallbacks: true }
+  # Claude Haiku 5.5 has no server-side refusal fallback.
+  fast: { provider: anthropic, model: "claude-haiku-5-5", temperature: null, effort: low, max_tokens: 4000 }
