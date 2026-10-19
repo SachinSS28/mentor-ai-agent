@@ -15,6 +15,7 @@ from mentor.settings import get_settings
 
 TAVILY = "https://api.tavily.com"
 PAGE_CHARS = 6000  # about 1,500 tokens of page text per read, to keep the model's context free
+SNIPPET_CHARS = 500  # per search result; read_webpage gets the rest
 TimeRange = Literal["day", "week", "month", "year"]
 # Mentor never reads LinkedIn pages: its terms forbid automated access to the site.
 BLOCKED_HOSTS = ("linkedin.com",)
@@ -98,6 +99,10 @@ def is_blocked(url: str) -> bool:
     return any(host == blocked or host.endswith(f".{blocked}") for blocked in BLOCKED_HOSTS)
 
 
+def cut(text: str, limit: int) -> str:
+    return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + " …"
+
+
 def read(url: str, question: str = "", client: httpx.Client | None = None) -> str:
     """The page's text as Markdown, cut to PAGE_CHARS. With a question, Tavily returns the most
     relevant parts of a long page instead of its beginning."""
@@ -109,8 +114,7 @@ def read(url: str, question: str = "", client: httpx.Client | None = None) -> st
     if not results:
         failures = data.get("failed_results") or [{}]
         raise ValueError(f"couldn't read {url}: {failures[0].get('error', 'no content')}")
-    text = (results[0].get("raw_content") or "").strip()
-    return text if len(text) <= PAGE_CHARS else text[:PAGE_CHARS].rsplit(" ", 1)[0] + " …"
+    return cut((results[0].get("raw_content") or "").strip(), PAGE_CHARS)
 
 
 def untrusted(body: str) -> str:
@@ -126,5 +130,5 @@ def format_results(results: list[WebResult]) -> str:
     lines = []
     for r in results:
         when = f" ({r.published[:16]})" if r.published else ""
-        lines.append(f"- [{r.title or r.url}]({r.url}){when}: {r.snippet}")
+        lines.append(f"- [{r.title or r.url}]({r.url}){when}: {cut(r.snippet, SNIPPET_CHARS)}")
     return untrusted("\n".join(lines))
