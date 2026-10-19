@@ -29,6 +29,7 @@ from mentor.db.heartbeat import beat
 from mentor.db.session import get_engine
 from mentor.db.state import get_state, set_state
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
+from mentor.practice import dhamma
 from mentor.settings import Host, get_settings
 
 log = logging.getLogger(__name__)
@@ -210,13 +211,19 @@ def make_job_desk(
         except Exception:
             log.exception("The morning routine failed; trying again in 15 minutes")
             return
-        if digest:
-            await send_to_owner(context.bot, chat_id, digest)
-            # Part of the conversation too, so a reply like "save J12" or "the second one" has
-            # the shortlist in context.
-            config: RunnableConfig = {"configurable": {"thread_id": f"telegram-{chat_id}"}}
-            update = {"messages": [AIMessage(digest)]}
-            await asyncio.to_thread(graph.update_state, config, update, as_node="agent")
+        try:
+            evening = await asyncio.to_thread(dhamma.evening_tick, now)
+        except Exception:
+            log.exception("The evening reflection failed; trying again in 15 minutes")
+            evening = None
+        for text in (digest, evening):
+            if text:
+                await send_to_owner(context.bot, chat_id, text)
+                # Part of the conversation too, so replies ("save J12", a reflection) have
+                # the message in context.
+                config: RunnableConfig = {"configurable": {"thread_id": f"telegram-{chat_id}"}}
+                update = {"messages": [AIMessage(text)]}
+                await asyncio.to_thread(graph.update_state, config, update, as_node="agent")
 
     return run
 

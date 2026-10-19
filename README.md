@@ -42,6 +42,8 @@ uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_
 
 **Research & news:** every 6 hours Mentor collects new papers, journal articles, water-sector news and funding calls (sources in `config/briefing.yaml`), scores them against your CV profile (`config/profile.md`), and adds the best to the 08:00 message. Ask any time: "any new papers on riverbank filtration?"
 
+**Dhamma practice:** the 08:00 message opens with a teaching from the Pali Canon and a practice for the day (paraphrases in `config/dhamma.yaml`), at 21:30 Mentor sends an evening reflection prompt, and full and new moon Uposatha days are announced the evening before and on the day. Times and switches are in the `practice` section of `config/charter.yaml`.
+
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
 ## Always-on server (Google Cloud): paused

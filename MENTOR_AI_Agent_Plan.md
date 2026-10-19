@@ -116,6 +116,7 @@ Muse is a personal agent built to *execute*, not just chat: you give it a goal, 
 - Honest feedback: flags overcommitment, repeated slips and low-value meetings.
 - Reflection prompts in the evening review; monthly "what to stop / start / continue".
 - Learning plans: break a skill goal into weekly sessions and track them.
+- **Path and values:** Sachin follows Theravada Buddhism. Mentor encourages practice of the Buddha's teaching (Noble Eightfold Path, Five Precepts, mindfulness, Brahmavihāras, Ten Pāramīs) alongside professional goals and family responsibilities: teachings linked to the day's situations, gentle reminders to meditate, reflect and keep Uposatha, and accurate sources (no invented quotations).
 
 ---
 

@@ -96,4 +96,6 @@ def test_a_briefing_failure_never_blocks_the_jobs(
 
     monkeypatch.setattr(briefing, "collect", broken)
     monkeypatch.setattr(briefing, "section", broken)
-    assert morning.tick(NOW) == "**Job shortlist**"
+    message = morning.tick(NOW)
+    assert message is not None and message.startswith("**Dhamma for today: ")  # opens the day
+    assert message.endswith("**Job shortlist**")

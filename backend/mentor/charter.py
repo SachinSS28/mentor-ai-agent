@@ -34,6 +34,16 @@ class JobSearchConfig(BaseModel):
     follow_up_days: int = 7
 
 
+class PracticeConfig(BaseModel):
+    """Dhamma practice support: morning teaching, evening reflection, Uposatha reminders."""
+
+    tradition: str = "Theravada"
+    morning_dhamma: bool = True
+    evening_reflection: bool = True
+    evening_time: str = "21:30"  # owner's time zone
+    uposatha: list[str] = ["new moon", "full moon"]
+
+
 class Charter(BaseModel):
     # Sections not used yet (workspaces, goals, budget, ...) are kept as plain data.
     model_config = ConfigDict(extra="allow")
@@ -41,6 +51,7 @@ class Charter(BaseModel):
     assistant: AssistantConfig
     owner: OwnerConfig
     job_search: JobSearchConfig = JobSearchConfig()
+    practice: PracticeConfig = PracticeConfig()
 
 
 def load_charter(path: Path | None = None) -> Charter:

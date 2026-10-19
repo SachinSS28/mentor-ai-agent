@@ -52,6 +52,15 @@ places: []
 #    usual_mode: mtr              # car | mtr | bus | cab
 #    buffer_minutes: 15
 
+# Dhamma practice (Theravada): a teaching in the 08:00 message, an evening reflection, and
+# Uposatha reminders (the evening before and on the day). Teachings: config/dhamma.yaml.
+practice:
+  tradition: Theravada
+  morning_dhamma: true
+  evening_reflection: true
+  evening_time: "21:30"        # Hong Kong time
+  uposatha: [new moon, full moon]
+
 # Job Desk: jobs from your LinkedIn job-alert emails, ranked against your profile.
 job_search:
   focus:

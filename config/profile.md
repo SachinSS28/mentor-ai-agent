@@ -77,5 +77,11 @@ collaboration in integrated water management, and water and environmental engine
 Hong Kong. This CV version targets the Master programme in Water Technology, Water Reuse and
 Water Management at the Vietnamese-German University (with TU Darmstadt).
 
+## Path and values
+Theravada Buddhist, training on the Buddha's path (sīla, samādhi, paññā) toward enlightenment
+(Nibbāna), while fulfilling professional goals and family responsibilities. Sachin wants Mentor
+to keep Sachin motivated by the Buddha's teaching, to suggest it and give reminders of it, and to
+help balance practice, career and family.
+
 ## Languages and interests
 English (fluent), Hindi (native), Chinese and Nepali (basic). Hiking, gym, squash, meditation.

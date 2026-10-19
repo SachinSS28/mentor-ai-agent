@@ -1,0 +1,213 @@
+# Dhamma for the morning message and prompts for the evening reflection (Theravada).
+# Every teaching is a paraphrase in plain English with its Pali Canon source, not a quotation:
+# translations differ, so read the source for the exact words. Mentor rotates through the list,
+# one per day. Edit, add or remove freely.
+
+teachings:
+  - theme: "The mind leads"
+    source: "Dhammapada, verses 1-2"
+    teaching: "Mind comes first and shapes all that we experience. Speak or act with a corrupted mind and suffering follows like a wheel follows the ox; act with a clear mind and happiness follows like a shadow that never leaves."
+    practice: "Before your first email or meeting today, pause for three breaths and set a clear, kind intention."
+
+  - theme: "Hatred ends by non-hatred"
+    source: "Dhammapada, verse 5"
+    teaching: "Hatred is never ended by hatred in this world; it ends only through non-hatred. This is an ancient and timeless law."
+    practice: "If someone irritates you today, answer from goodwill instead of returning the feeling."
+
+  - theme: "Heedfulness"
+    source: "Dhammapada, verse 21"
+    teaching: "Heedfulness is the path to the Deathless; heedlessness is the path to death. The heedful do not die; the heedless are as if dead already."
+    practice: "Choose one task today and give it your full, undistracted attention from start to finish."
+
+  - theme: "An island no flood can overwhelm"
+    source: "Dhammapada, verse 25"
+    teaching: "By effort, heedfulness, restraint and self-mastery, the wise make of themselves an island that no flood can overwhelm."
+    practice: "Build your island in small blocks: one focused hour on your most important work before checking messages."
+
+  - theme: "Training the mind"
+    source: "Dhammapada, verse 35"
+    teaching: "The mind is swift, hard to hold back and flits wherever it likes. Taming it is good, and a tamed mind brings happiness."
+    practice: "Sit for ten minutes of mindfulness of breathing; each time the mind wanders, return gently without blame."
+
+  - theme: "Look at your own deeds"
+    source: "Dhammapada, verse 50"
+    teaching: "Don't dwell on the faults of others or on what they have done and left undone; look instead at what you yourself have done and left undone."
+    practice: "Tonight, note one thing you did well and one you left undone, without judging anyone else."
+
+  - theme: "Shaping oneself like water"
+    source: "Dhammapada, verse 80"
+    teaching: "Irrigators guide the water, fletchers straighten their arrows, carpenters shape the wood; the wise shape and master themselves."
+    practice: "As you guide water in your engineering, guide one habit today: pick it, and steer it one step."
+
+  - theme: "Unshaken by praise and blame"
+    source: "Dhammapada, verse 81"
+    teaching: "As a solid rock is not shaken by the wind, the wise are not moved by praise or blame."
+    practice: "Whatever feedback comes today on your work or applications, receive it as information, not as who you are."
+
+  - theme: "Conquering oneself"
+    source: "Dhammapada, verse 103"
+    teaching: "Though one might conquer a thousand times a thousand people in battle, the one who conquers oneself is the greatest of conquerors."
+    practice: "Notice one craving or aversion today and let it pass without acting on it."
+
+  - theme: "Drop by drop"
+    source: "Dhammapada, verses 121-122"
+    teaching: "Don't think lightly of a small wrong or a small good, \"it won't come to me.\" Drop by drop the water pot is filled; little by little the wise fill themselves with goodness."
+    practice: "Do one small good deed today that no one asked for: a kind word to a student, colleague or family member."
+
+  - theme: "Your own refuge"
+    source: "Dhammapada, verse 160"
+    teaching: "You are your own protector; who else could be your protector? With yourself well trained, you gain a refuge that is hard to find."
+    practice: "Keep one promise you made to yourself today, however small."
+
+  - theme: "The teaching of all Buddhas"
+    source: "Dhammapada, verse 183"
+    teaching: "Avoid all evil, cultivate what is good, purify your mind: this is the teaching of the Buddhas."
+    practice: "Hold these three as today's compass for each decision at work and at home."
+
+  - theme: "The greatest wealth"
+    source: "Dhammapada, verse 204"
+    teaching: "Health is the greatest gain, contentment the greatest wealth, trust the best kinship, and Nibbana the highest happiness."
+    practice: "Take care of your body today (a walk, the gym, good sleep) and notice one thing you already have that is enough."
+
+  - theme: "Conquering anger"
+    source: "Dhammapada, verse 223"
+    teaching: "Overcome anger with non-anger, evil with good, stinginess with giving, and lies with truth."
+    practice: "If tension rises today, reply more slowly and more kindly than you feel like."
+
+  - theme: "Seeing one's own faults"
+    source: "Dhammapada, verse 252"
+    teaching: "The faults of others are easy to see, one's own are hard to see. People winnow others' faults like chaff while hiding their own."
+    practice: "Ask yourself honestly where you could improve in one current project or relationship."
+
+  - theme: "You must make the effort"
+    source: "Dhammapada, verse 276"
+    teaching: "You yourselves must make the effort; the Buddhas only point the way. Those who practise meditation are freed from the bonds of Mara."
+    practice: "Don't wait for the perfect moment: give your manuscript or application one hour of real effort today."
+
+  - theme: "Impermanence, suffering, non-self"
+    source: "Dhammapada, verses 277-279"
+    teaching: "All conditioned things are impermanent; all conditioned things are unsatisfactory; all things are not-self. Seeing this with wisdom, one turns away from suffering. This is the path to purity."
+    practice: "When something goes wrong today, remind yourself that it too is changing and will not last."
+
+  - theme: "The gift of the Dhamma"
+    source: "Dhammapada, verse 354"
+    teaching: "The gift of the Dhamma surpasses all gifts; its taste surpasses all tastes, its delight all delights."
+    practice: "Share something genuinely useful with a student or colleague today, freely."
+
+  - theme: "The Middle Way"
+    source: "Dhammacakkappavattana Sutta (SN 56.11)"
+    teaching: "Avoid the two extremes of indulgence in sense pleasures and of self-mortification. The Middle Way, the Noble Eightfold Path, leads to calm, insight and Nibbana."
+    practice: "Work hard today, but not at the cost of rest, meals or family time: find the balanced pace."
+
+  - theme: "The Four Noble Truths"
+    source: "Dhammacakkappavattana Sutta (SN 56.11)"
+    teaching: "There is suffering; it has a cause, craving; it can cease; and there is a path to its ending, the Noble Eightfold Path."
+    practice: "When stress comes up today, look for the craving behind it: wanting things to be other than they are."
+
+  - theme: "Test the teaching yourself"
+    source: "Kalama Sutta (AN 3.65)"
+    teaching: "Don't accept things merely because of tradition, report, scripture, reasoning or a respected teacher. When you know for yourself that something is wholesome, blameless, praised by the wise and leads to welfare and happiness, then take it up."
+    practice: "Bring the scientist's honesty you use in research to your own practice: test one teaching by living it today."
+
+  - theme: "Boundless goodwill"
+    source: "Karaniya Metta Sutta (Snp 1.8)"
+    teaching: "Just as a mother would protect her only child with her life, cultivate a boundless heart of goodwill towards all beings."
+    practice: "Spend five minutes wishing well to yourself, your family, a colleague, a difficult person, and all beings."
+
+  - theme: "Mindfulness of breathing"
+    source: "Anapanasati Sutta (MN 118)"
+    teaching: "Mindfulness of breathing, developed and cultivated, brings great fruit: it fulfils the four foundations of mindfulness, the seven factors of awakening, and true knowledge and release."
+    practice: "Sit for fifteen minutes and simply know each breath in and each breath out."
+
+  - theme: "The four foundations of mindfulness"
+    source: "Satipatthana Sutta (MN 10)"
+    teaching: "There is a direct path for the purification of beings and the ending of sorrow: mindfulness of the body, of feelings, of mind and of mental qualities, ardent, clearly comprehending and mindful."
+    practice: "Three times today, stop and notice your body, your feeling (pleasant, unpleasant or neutral) and your state of mind."
+
+  - theme: "Five daily recollections"
+    source: "Upajjhatthana Sutta (AN 5.57)"
+    teaching: "Recollect often that you are subject to ageing, illness and death; that you will be separated from all that is dear; and that you are the owner of your actions, heir to your actions."
+    practice: "Reflect on these five briefly this morning, and let them make today's priorities clearer."
+
+  - theme: "The mirror of reflection"
+    source: "Ambalatthikarahulovada Sutta (MN 61)"
+    teaching: "Before, during and after any action of body, speech or mind, reflect like looking in a mirror - does this lead to harm for myself, for others or both? If so, refrain; if it leads to well-being, continue."
+    practice: "Use the mirror once today before an important message, decision or conversation."
+
+  - theme: "Right speech"
+    source: "Abhaya Rajakumara Sutta (MN 58)"
+    teaching: "The Buddha speaks only what is true and beneficial, and knows the right time to say it, whether or not it is welcome."
+    practice: "Before you speak or write today, check: is it true, is it helpful, is it the right time?"
+
+  - theme: "The eight worldly conditions"
+    source: "Lokavipatti Sutta (AN 8.6)"
+    teaching: "Gain and loss, fame and disrepute, praise and blame, pleasure and pain turn the world around. The wise see that they are impermanent and are not carried away by them."
+    practice: "Whatever news your job search brings today, name the worldly condition and stay steady."
+
+  - theme: "The second arrow"
+    source: "Sallatha Sutta (SN 36.6)"
+    teaching: "When struck by a painful feeling, the untrained person adds a second arrow of worry, resistance and grief. The wise feel the first arrow only, and do not shoot the second."
+    practice: "When a setback hurts today, notice where your mind starts adding the second arrow, and set it down."
+
+  - theme: "Admirable friendship"
+    source: "Upaddha Sutta (SN 45.2)"
+    teaching: "Admirable friendship, companionship and association is not half of the holy life; it is the whole of it."
+    practice: "Reach out today to a good friend, mentor or Dhamma companion who supports your growth."
+
+  - theme: "Living in the present"
+    source: "Bhaddekaratta Sutta (MN 131)"
+    teaching: "Don't chase after the past or long for the future. Whatever is present, see it clearly, right there, steadily and unshaken."
+    practice: "When you catch yourself replaying the past or worrying about what's next, return to the task in front of you."
+
+  - theme: "Duties within the family"
+    source: "Sigalovada Sutta (DN 31)"
+    teaching: "A wise lay follower honours the six directions: parents, teachers, spouse and children, friends, workers, and spiritual guides, each with mutual duties. Supporting one's parents and caring for one's family is itself practice."
+    practice: "Give your family your full attention for some time today, without the phone."
+
+  - theme: "Guarding one's wealth and time"
+    source: "Sigalovada Sutta (DN 31)"
+    teaching: "Six ways waste wealth - intoxicants, roaming the streets at untimely hours, chasing entertainment, gambling, bad company and idleness."
+    practice: "Notice where your time leaks today and reclaim thirty minutes for what truly matters."
+
+  - theme: "The highest blessings"
+    source: "Mangala Sutta (Snp 2.4)"
+    teaching: "Among the highest blessings are supporting mother and father, cherishing spouse and children, work that causes no harm, generosity, patience, and a mind unshaken by the ups and downs of the world."
+    practice: "Count three of these blessings already present in your life."
+
+  - theme: "Right livelihood"
+    source: "Vanijja Sutta (AN 5.177)"
+    teaching: "A lay follower should not trade in weapons, living beings, meat, intoxicants or poisons. Right livelihood earns wealth without harming others."
+    practice: "When you weigh a job or project, ask whether it serves others' well-being; your work for clean water already does."
+
+  - theme: "The power of giving"
+    source: "Itivuttaka 26"
+    teaching: "If people knew, as the Buddha knows, the result of giving and sharing, they would not eat without first sharing, even their last mouthful."
+    practice: "Give something today - time, help, knowledge or a gift - and notice the joy in giving."
+
+  - theme: "The Ten Perfections"
+    source: "Theravada commentarial tradition (Buddhavamsa and Jataka commentary)"
+    teaching: "The ten perfections that ripen into awakening are generosity, virtue, renunciation, wisdom, energy, patience, truthfulness, resolve, goodwill and equanimity."
+    practice: "Pick one perfection as today's theme and practise it in your work and at home."
+
+  - theme: "The four divine abidings"
+    source: "Tevijja Sutta (DN 13)"
+    teaching: "Dwell pervading the world in every direction with a mind of goodwill, compassion, sympathetic joy and equanimity - abundant, boundless, free of hostility."
+    practice: "Rejoice sincerely today in someone else's success (muditā), especially a peer's."
+
+  - theme: "The Five Precepts"
+    source: "The Five Precepts (pañcasīla)"
+    teaching: "Refrain from killing, from taking what is not given, from sexual misconduct, from false speech, and from intoxicants that cloud the mind. Virtue is the ground of concentration and wisdom."
+    practice: "Renew the five precepts this morning, and keep a light watch on speech in particular."
+
+# Prompts for the evening reflection message (one per evening, rotating).
+evening_prompts:
+  - "Looking back on today, as in the Buddha's advice to Rahula (MN 61) - which of your actions of body, speech and mind led to well-being, and which to harm, for yourself or others?"
+  - "Where did you practise one of the pāramīs today - generosity, patience, energy, truthfulness or goodwill?"
+  - "What moved you away from the present moment today, and what brought you back?"
+  - "Was there a moment today when you added a \"second arrow\" to a difficulty (SN 36.6)? What would letting it go look like?"
+  - "Which of the five precepts was easiest to keep today, and which needs more care tomorrow?"
+  - "Who helped you today - family, a teacher, a colleague? Take a moment of gratitude and goodwill for them."
+  - "Did you give your family full attention today? What would make tomorrow a little more balanced between work, family and practice?"
+  - "What did you learn today in your work or research, and how could it serve others?"
+  - "Where did craving or aversion push you today? What do you notice about it now that it has passed?"
+  - "Before sleeping, spend a few minutes spreading goodwill (mettā) to yourself, your family, and all beings."
