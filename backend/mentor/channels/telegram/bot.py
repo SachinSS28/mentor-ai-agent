@@ -20,7 +20,7 @@ from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, NetworkError
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from mentor import morning, reading, review
+from mentor import checkin, morning, reading, review
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
@@ -58,6 +58,11 @@ def decide(chat_id: int, allowed_chat_id: int | None) -> Decision:
     return "answer" if chat_id == allowed_chat_id else "ignore"
 
 
+def note_owner_message() -> None:
+    """When the owner last wrote, so check-ins stay quiet during a conversation."""
+    set_state(checkin.OWNER_LAST_MESSAGE, datetime.now(owner_timezone()).isoformat())
+
+
 def split_message(text: str, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
     return [text[i : i + limit] for i in range(0, len(text), limit)] or [""]
 
@@ -92,6 +97,7 @@ def make_handler(
             await message.reply_text(pairing_reply(chat.id))
         elif decision == "answer":
             await chat.send_action(ChatAction.TYPING)
+            await asyncio.to_thread(note_owner_message)
             reply = await asyncio.to_thread(ask, graph, message.text, f"telegram-{chat.id}")
             await send_reply(message, reply)
 
@@ -165,6 +171,7 @@ def make_media_handler(
         if decision == "pair":
             await message.reply_text(pairing_reply(chat.id))
         elif decision == "answer":
+            await asyncio.to_thread(note_owner_message)
             await keep_typing(chat, asyncio.create_task(answer(message, chat.id)))
 
     return MessageHandler(filters.ChatType.PRIVATE & MEDIA, on_media)
@@ -322,6 +329,21 @@ def reminder_text(task: Task) -> str:
     return f"⏰ **Reminder, T{task.ref}:** {task.title}{due}{notes}\n{done}"
 
 
+def make_checkins(
+    graph: MentorGraph, chat_id: int
+) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
+    async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
+        try:
+            text = await asyncio.to_thread(checkin.tick, datetime.now(owner_timezone()))
+        except Exception:
+            log.exception("The check-in failed; the next one comes at its time")
+            return
+        if text:
+            await tell_owner(graph, context.bot, chat_id, text)
+
+    return run
+
+
 def make_reminders(
     graph: MentorGraph, chat_id: int
 ) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
@@ -376,5 +398,11 @@ def run_telegram_bot() -> None:
                 interval=REMINDERS_EVERY,
                 first=20,
                 name="reminders",
+            )
+            app.job_queue.run_repeating(
+                make_checkins(graph, settings.telegram_allowed_chat_id),
+                interval=REMINDERS_EVERY,
+                first=40,
+                name="checkins",
             )
         app.run_polling(allowed_updates=Update.ALL_TYPES)

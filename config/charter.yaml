@@ -124,6 +124,13 @@ research_topics:
 documents:
   drive_folder: Mentor         # the only Google Drive folder Mentor reads (read-only)
 
+checkins:
+  enabled: true
+  every_hours: 2               # a short check-in: today's tasks, progress, steps toward your goals
+  first: "10:00"
+  last: "20:00"
+  quiet_after_chat_minutes: 45 # skipped while you're already talking to Mentor
+
 review:
   enabled: true
   day: Sunday                  # weekly review: progress, slips, next week's top three

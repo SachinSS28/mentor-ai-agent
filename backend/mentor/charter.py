@@ -68,6 +68,16 @@ class ReviewConfig(BaseModel):
     time: str = "19:00"  # owner's time zone
 
 
+class CheckinConfig(BaseModel):
+    """Short check-ins through the day: today's tasks, progress, and steps toward the goals."""
+
+    enabled: bool = True
+    every_hours: int = 2
+    first: str = "10:00"  # owner's time zone
+    last: str = "20:00"
+    quiet_after_chat_minutes: int = 45  # skip a check-in while the owner is already talking
+
+
 class Charter(BaseModel):
     # Sections not used yet (workspaces, goals, budget, ...) are kept as plain data.
     model_config = ConfigDict(extra="allow")
@@ -79,6 +89,7 @@ class Charter(BaseModel):
     network: NetworkConfig = NetworkConfig()
     documents: DocumentsConfig = DocumentsConfig()
     review: ReviewConfig = ReviewConfig()
+    checkins: CheckinConfig = CheckinConfig()
     # The owner's research topics as exact phrases ("a + b" needs both), for finding people and
     # the research highlights.
     research_topics: dict[str, list[str]] = {}
