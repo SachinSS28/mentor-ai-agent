@@ -141,8 +141,9 @@ activity:
   private_apps: [WhatsApp, WeChat, Messages, Telegram, Signal, FaceTime, 1Password, Bitwarden,
                  Keychain Access, Passwords]
   private_sites: [web.whatsapp.com, web.telegram.org, wx.qq.com, mail.google.com,
-                  accounts.google.com, bank, hsbc, hangseng, bochk, citibank, paypal, payme,
-                  alipay, wise.com, octopus.com.hk, ird.gov.hk]
+                  outlook.live.com, outlook.office.com, outlook.office365.com,
+                  outlook.cloud.microsoft, accounts.google.com, bank, hsbc, hangseng, bochk,
+                  citibank, paypal, payme, alipay, wise.com, octopus.com.hk, ird.gov.hk]
   hide_titles: [Mail, Microsoft Outlook, Spark]   # app recorded, email subjects not
 
 review:

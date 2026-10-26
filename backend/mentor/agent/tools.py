@@ -611,6 +611,12 @@ def my_activity(period: str = "today") -> str:
         lines.append(
             f"In front now ({current.at.astimezone(now.tzinfo):%H:%M}): {activity.label(current)}"
         )
+        if current.app == activity.PRIVATE and (
+            before := activity.latest(now, timedelta(minutes=30), public=True)
+        ):  # usually this chat, in Telegram
+            lines.append(
+                f"Before that ({before.at.astimezone(now.tzinfo):%H:%M}): {activity.label(before)}"
+            )
     lines += (
         [f"Activity for {name}:", text]
         if text

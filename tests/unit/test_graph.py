@@ -175,3 +175,57 @@ def test_a_failed_tool_doesnt_count_as_done(system_prompt: Any) -> None:
 def test_ordinary_answers_are_left_alone(system_prompt: Any) -> None:
     graph = build_graph(scripted("Your calendar is free on 12 Nov."), [add_task], system_prompt)
     assert ask(graph, "Am I free?", "t1") == "Your calendar is free on 12 Nov."
+
+
+@tool
+def my_activity(period: str = "today") -> str:
+    """What's on the owner's screen."""
+    return f"In front now (13:50): VS Code — plan.md [{period}]"
+
+
+@tool
+def pause_watching(hours: float = 1.0) -> str:
+    """Pause the activity journal."""
+    return "The activity journal is paused until 15:50."
+
+
+def tool_results(graph: Any) -> list[str]:
+    messages = graph.get_state({"configurable": {"thread_id": "t1"}}).values["messages"]
+    return [m.text for m in messages if isinstance(m, ToolMessage)]
+
+
+def test_screen_questions_look_in_the_journal_first(system_prompt: Any) -> None:
+    # The model never gets to answer "No, I can't see your screen" from what it believes.
+    graph = build_graph(
+        scripted("You're in VS Code on plan.md."), [my_activity], system_prompt, InMemorySaver()
+    )
+    assert ask(graph, "can you see my screen?", "t1") == "You're in VS Code on plan.md."
+    assert tool_results(graph) == ["In front now (13:50): VS Code — plan.md [today]"]
+
+
+def test_questions_about_yesterday_look_at_yesterday(system_prompt: Any) -> None:
+    graph = build_graph(scripted("Mostly writing."), [my_activity], system_prompt, InMemorySaver())
+    ask(graph, "What did I work on yesterday?", "t1")
+    assert tool_results(graph) == ["In front now (13:50): VS Code — plan.md [yesterday]"]
+
+
+def test_made_up_activity_is_replaced_by_a_lookup(system_prompt: Any) -> None:
+    model = scripted("The activity journal shows you in Word on a report.", "You're in VS Code.")
+    graph = build_graph(model, [my_activity], system_prompt, InMemorySaver())
+    assert ask(graph, "How's it going?", "t1") == "You're in VS Code."
+    stored = graph.get_state({"configurable": {"thread_id": "t1"}}).values["messages"]
+    assert not any("Word" in m.text for m in stored)
+
+
+def test_pausing_the_journal_needs_no_lookup(system_prompt: Any) -> None:
+    model = scripted(call("pause_watching", hours=2), "The activity journal is paused until 15:50.")
+    graph = build_graph(model, [my_activity, pause_watching], system_prompt, InMemorySaver())
+    assert ask(graph, "Pause watching for 2 hours", "t1").startswith("The activity journal is")
+    assert tool_results(graph) == ["The activity journal is paused until 15:50."]
+
+
+def test_describing_the_journal_is_not_a_claim(system_prompt: Any) -> None:
+    reply = "I keep an activity journal of the app in front, and I can pause it."
+    graph = build_graph(scripted(reply), [my_activity], system_prompt, InMemorySaver())
+    assert ask(graph, "What tools do you have?", "t1") == reply
+    assert tool_results(graph) == []

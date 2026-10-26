@@ -97,6 +97,11 @@ def test_activity_journal_summaries_and_pause(new_database: NewDatabase) -> None
         "Activity for the last 2 hours:\nActive at the Mac: 35 min\n"
         "- Safari — IELTS: 30 min\n- Private: 5 min"
     )
+    activity.record(ActivityEntry(at=now - timedelta(seconds=20), app="(private)"))
+    assert my_activity.invoke({}).startswith(
+        f"In front now ({now - timedelta(seconds=20):%H:%M}): Private\n"
+        f"Before that ({shown_at}): Safari — IELTS\n"
+    )  # the owner is usually in this chat, in Telegram
     activity.prune(now, keep_days=7)
     assert all(e.app != "Old" for e in activity.entries(now - timedelta(days=30), now))
 

@@ -42,17 +42,29 @@ end tell
 return appName & tab & windowTitle
 """
 # Browsers that tell AppleScript the current tab; Chromium ones also say whether it's incognito.
+# The parts are joined outside the browser's block: inside it, `tab` means a browser tab, not
+# the tab character.
 SAFARI_TAB = """
-tell application "Safari" to tell front window
-    return (name of current tab) & tab & (URL of current tab)
+tell application "Safari"
+    tell front window
+        set tabName to name of current tab
+        set tabURL to URL of current tab
+    end tell
 end tell
+return tabName & tab & tabURL
 """
 CHROMIUM_TAB = """
-tell application "{app}" to tell front window
-    return (title of active tab) & tab & (URL of active tab) & tab & (mode as text)
+tell application "{app}"
+    tell front window
+        set tabName to title of active tab
+        set tabURL to URL of active tab
+        set windowMode to mode as text
+    end tell
 end tell
+return tabName & tab & tabURL & tab & windowMode
 """
 CHROMIUM = ("Google Chrome", "Microsoft Edge", "Brave Browser", "Arc")
+APP_NAMES = {"Code": "VS Code"}  # names macOS reports that people don't use
 
 
 @dataclass(frozen=True)
@@ -167,10 +179,11 @@ def watch() -> None:
 def label(item: ActivityEntry) -> str:
     if item.app == PRIVATE:
         return "Private"
+    app = APP_NAMES.get(item.app, item.app)
     if item.title:
         title = item.title if len(item.title) <= 90 else item.title[:90] + "…"
-        return f"{item.app} — {title}"
-    return item.app
+        return f"{app} — {title}"
+    return app
 
 
 def entries(start: datetime, end: datetime) -> list[ActivityEntry]:
@@ -179,9 +192,14 @@ def entries(start: datetime, end: datetime) -> list[ActivityEntry]:
         return list(session.scalars(query.order_by(ActivityEntry.at)))
 
 
-def latest(now: datetime, within: timedelta = timedelta(minutes=3)) -> ActivityEntry | None:
-    """What's in front on the Mac now: the newest entry, if it's recent."""
+def latest(
+    now: datetime, within: timedelta = timedelta(minutes=3), public: bool = False
+) -> ActivityEntry | None:
+    """What's in front on the Mac now: the newest entry, if it's recent (public: the newest
+    that isn't private)."""
     query = select(ActivityEntry).where(ActivityEntry.at >= now - within, ActivityEntry.at <= now)
+    if public:
+        query = query.where(ActivityEntry.app != PRIVATE)
     with get_sessionmaker()() as session:
         return session.scalars(query.order_by(ActivityEntry.at.desc()).limit(1)).first()
 

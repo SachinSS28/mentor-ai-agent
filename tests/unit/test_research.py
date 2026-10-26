@@ -198,6 +198,8 @@ def test_the_front_window_and_browser_tab_are_read(monkeypatch: pytest.MonkeyPat
     assert activity.front() == activity.Seen(
         "Google Chrome", "Section 6 — Udemy", "https://www.udemy.com/x", True
     )
+    for script in (activity.SAFARI_TAB, activity.CHROMIUM_TAB):  # inside, `tab` is a browser tab
+        assert script.rindex("end tell") < script.index("& tab &")
     answers["System Events"] = "Code\tmentor — tools.py"
     assert activity.front() == activity.Seen("Code", "mentor — tools.py")
 
@@ -207,6 +209,9 @@ def test_activity_totals_and_periods() -> None:
     items += [ActivityEntry(at=NOW, app="(private)") for _ in range(10)]
     counted = activity.totals(items)
     assert counted.most_common(2) == [("Safari — IELTS | Udemy", 45), ("Private", 10)]
+    assert (
+        activity.label(ActivityEntry(at=NOW, app="Code", title="tools.py")) == "VS Code — tools.py"
+    )
     assert activity.duration(125) == "2 h 5 min" and activity.duration(45) == "45 min"
     start, end, name = activity.period("last 2 hours", NOW)
     assert (end - start, name) == (timedelta(hours=2), "the last 2 hours")
