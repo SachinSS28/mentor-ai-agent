@@ -131,6 +131,20 @@ checkins:
   last: "20:00"
   quiet_after_chat_minutes: 45 # skipped while you're already talking to Mentor
 
+activity:
+  # The activity journal: the app and window or tab title in front on the Mac, once a minute,
+  # kept 7 days and never leaving the Mac. Say "pause watching" to Mentor to stop it for a while.
+  enabled: true
+  every_seconds: 60
+  idle_minutes: 5              # away this long: nothing recorded
+  keep_days: 7
+  private_apps: [WhatsApp, WeChat, Messages, Telegram, Signal, FaceTime, 1Password, Bitwarden,
+                 Keychain Access, Passwords]
+  private_sites: [web.whatsapp.com, web.telegram.org, wx.qq.com, mail.google.com,
+                  accounts.google.com, bank, hsbc, hangseng, bochk, citibank, paypal, payme,
+                  alipay, wise.com, octopus.com.hk, ird.gov.hk]
+  hide_titles: [Mail, Microsoft Outlook, Spark]   # app recorded, email subjects not
+
 review:
   enabled: true
   day: Sunday                  # weekly review: progress, slips, next week's top three

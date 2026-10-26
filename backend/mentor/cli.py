@@ -63,12 +63,21 @@ def main(argv: Sequence[str] | None = None) -> None:
     commands.add_parser(
         "google-auth", help="connect your Google account (one-time, in the browser)"
     )
+    commands.add_parser(
+        "watch", help="on the Mac: keep the activity journal (what's in front, once a minute)"
+    )
     args = parser.parse_args(argv)
 
     if args.command in ("standby", "sync"):
         from mentor.channels.telegram import failover
 
         failover.run_standby() if args.command == "standby" else failover.sync_now()
+        return
+
+    if args.command == "watch":
+        from mentor.activity import watch
+
+        watch()
         return
 
     if args.command == "google-auth":

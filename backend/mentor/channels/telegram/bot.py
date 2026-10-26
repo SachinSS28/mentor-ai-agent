@@ -32,6 +32,7 @@ from mentor.db.state import get_state, set_state
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 from mentor.mcp_servers.mentor_core import tasks
 from mentor.practice import dhamma
+from mentor.research import library, reports
 from mentor.settings import Host, get_settings
 
 log = logging.getLogger(__name__)
@@ -306,6 +307,10 @@ def make_job_desk(
         except Exception:
             log.exception("The weekly review failed; trying again in 15 minutes")
             weekly = None
+        try:
+            await asyncio.to_thread(library.tick, now)
+        except Exception:
+            log.exception("The library sync failed; trying again later")
         for text in (digest, evening, weekly):
             if text:
                 await tell_owner(graph, context.bot, chat_id, text)
@@ -344,6 +349,42 @@ def make_checkins(
     return run
 
 
+def make_research(
+    graph: MentorGraph, chat_id: int
+) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
+    """Writes queued research reports one at a time and sends each as a file."""
+
+    async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
+        report = await asyncio.to_thread(reports.claim)
+        if report is None:
+            return
+        try:
+            summary, text = await asyncio.to_thread(reports.run, report)
+        except Exception as error:
+            log.exception("Research R%d failed", report.ref)
+            await asyncio.to_thread(reports.finish, report.ref, status="failed", error=str(error))
+            await tell_owner(
+                graph,
+                context.bot,
+                chat_id,
+                f"Research R{report.ref} ({report.question}) couldn't be finished: {error}",
+            )
+            return
+        heading = f"**Research report R{report.ref}: {report.question}**"
+        await tell_owner(
+            graph, context.bot, chat_id, f"{heading}\n{summary}\n\nThe full report is attached."
+        )
+        await context.bot.send_document(
+            chat_id, document=text.encode(), filename=reports.file_name(report)
+        )
+        try:
+            await asyncio.to_thread(library.index_report, report.ref, report.question, text)
+        except Exception:
+            log.exception("Couldn't add R%d to the library", report.ref)
+
+    return run
+
+
 def make_reminders(
     graph: MentorGraph, chat_id: int
 ) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
@@ -375,6 +416,7 @@ def run_telegram_bot() -> None:
             status,
         )
         app.bot_data["heartbeat"] = asyncio.create_task(keep_beating(settings.host))
+        await asyncio.to_thread(reports.requeue_stale)  # reports cut short by a restart
 
     async def stop_beating(app: Application[Any, Any, Any, Any, Any, Any]) -> None:
         app.bot_data["heartbeat"].cancel()
@@ -398,6 +440,12 @@ def run_telegram_bot() -> None:
                 interval=REMINDERS_EVERY,
                 first=20,
                 name="reminders",
+            )
+            app.job_queue.run_repeating(
+                make_research(graph, settings.telegram_allowed_chat_id),
+                interval=REMINDERS_EVERY,
+                first=30,
+                name="research",
             )
             app.job_queue.run_repeating(
                 make_checkins(graph, settings.telegram_allowed_chat_id),

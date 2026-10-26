@@ -10,3 +10,5 @@ roles:
   # window, your saved memories and tool results with room to spare (Ollama's default is 4,096).
   orchestrator: { provider: ollama, model: "gemma4:e4b", temperature: 0.3, num_ctx: 32768 }
   fast: { provider: ollama, model: "gemma4:e4b", temperature: 0, num_ctx: 32768 }
+  # Search by meaning in your own documents: EmbeddingGemma (300M), small enough to run beside Gemma.
+  embed: { provider: ollama, model: "embeddinggemma", temperature: null }

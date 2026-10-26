@@ -9,7 +9,7 @@ import yaml
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_ollama import ChatOllama
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from pydantic import BaseModel
 
 from mentor.settings import get_settings
@@ -159,3 +159,12 @@ def get_chat_model(role: Role, config: ModelsConfig | None = None) -> BaseChatMo
             thinking_level=rc.thinking_level,
         )
     raise NotImplementedError("Bedrock models are wired up in step 0.4, once AWS access is ready")
+
+
+def get_embeddings(config: ModelsConfig | None = None) -> OllamaEmbeddings:
+    """The embedding model for Mentor's library (search by meaning), run by Ollama on the Mac."""
+    config = config or load_models_config()
+    rc = config.roles.get("embed")
+    if rc is None or rc.provider != "ollama":
+        raise ValueError("the library needs an Ollama embedding model as the `embed` role")
+    return OllamaEmbeddings(model=rc.model, base_url=ollama_url(config))

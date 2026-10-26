@@ -2,8 +2,9 @@
 
 from datetime import datetime
 
-from mentor.charter import Charter
-from mentor.settings import Host
+from mentor.agent.models import ModelsConfig, load_models_config
+from mentor.charter import Charter, get_charter, owner_profile_text
+from mentor.settings import Host, get_settings
 
 LANGUAGE_RULES = {
     "english": (
@@ -61,3 +62,13 @@ def build_system_prompt(
 
 def stamp(text: str, sent_at: datetime) -> str:
     return f"[{sent_at:%a %d %b %Y, %H:%M}] {text}"
+
+
+def mentor_system_prompt(config: ModelsConfig | None = None) -> str:
+    """Mentor's instructions with the charter and the owner's profile filled in."""
+    settings = get_settings()
+    persona = (settings.config_dir / "persona.md").read_text()
+    role = (config or load_models_config()).roles["orchestrator"]
+    return build_system_prompt(
+        get_charter(), persona, settings.host, role.model, owner_profile_text()
+    )

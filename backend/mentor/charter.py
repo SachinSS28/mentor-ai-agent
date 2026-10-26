@@ -78,6 +78,20 @@ class CheckinConfig(BaseModel):
     quiet_after_chat_minutes: int = 45  # skip a check-in while the owner is already talking
 
 
+class ActivityConfig(BaseModel):
+    """The activity journal: what's in front on the Mac once a minute, kept a few days."""
+
+    enabled: bool = True
+    every_seconds: int = 60
+    idle_minutes: int = 5  # away from the keyboard this long: not recorded
+    keep_days: int = 7
+    # Recorded only as "(private)": no app name, title or site.
+    private_apps: list[str] = []
+    private_sites: list[str] = []  # parts of a web address, e.g. "hsbc" or "mail.google.com"
+    # The app is recorded, its window titles (e.g. email subjects) aren't.
+    hide_titles: list[str] = []
+
+
 class Charter(BaseModel):
     # Sections not used yet (workspaces, goals, budget, ...) are kept as plain data.
     model_config = ConfigDict(extra="allow")
@@ -90,6 +104,7 @@ class Charter(BaseModel):
     documents: DocumentsConfig = DocumentsConfig()
     review: ReviewConfig = ReviewConfig()
     checkins: CheckinConfig = CheckinConfig()
+    activity: ActivityConfig = ActivityConfig()
     # The owner's research topics as exact phrases ("a + b" needs both), for finding people and
     # the research highlights.
     research_topics: dict[str, list[str]] = {}

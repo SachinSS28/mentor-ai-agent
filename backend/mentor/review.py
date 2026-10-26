@@ -9,8 +9,9 @@ from datetime import datetime, timedelta
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from mentor.agent.app import mentor_system_prompt
+from mentor import activity
 from mentor.agent.models import get_chat_model
+from mentor.agent.prompts import mentor_system_prompt
 from mentor.briefing import store as briefing_store
 from mentor.charter import get_charter
 from mentor.db.models import Task
@@ -78,6 +79,14 @@ def week_facts(now: datetime) -> list[str]:
         facts.append(f"New people suggested to meet: {suggested}")
 
     facts.append(f"Research and news items sent: {briefing_store.sent_between(start, now)}")
+    counted = activity.totals(activity.entries(start, now), get_charter().activity.every_seconds)
+    if counted:
+        top = "; ".join(
+            f"{name} ({activity.duration(m)})"
+            for name, m in counted.most_common(6)
+            if name != "Private"
+        )
+        facts.append(f"Time at the Mac: {activity.duration(sum(counted.values()))}; mostly {top}")
     days = [now.date() + timedelta(days=n) for n in range(1, 8)]
     if moons := [f"{day:%a %d %b} ({phase})" for day in days if (phase := uposatha(day, now))]:
         facts.append(f"Uposatha next week: {', '.join(moons)}")

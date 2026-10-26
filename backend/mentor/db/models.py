@@ -474,3 +474,59 @@ class ResearchHighlight(Base):
     published_on: Mapped[date | None] = mapped_column(Date)
     citations: Mapped[int] = mapped_column(Integer, server_default="0")
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+LIBRARY_DIMENSIONS = 768  # EmbeddingGemma, run locally by Ollama
+
+
+class ResearchReport(Base):
+    """A deep-research report the owner asked for (R-number), written in the background."""
+
+    __tablename__ = "research_reports"
+    __table_args__ = (one_of("status", ("queued", "running", "done", "failed")),)
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    ref: Mapped[int] = mapped_column(BigInteger, Identity(), unique=True)
+    question: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(8), server_default="queued", index=True)
+    summary: Mapped[str | None] = mapped_column(Text)
+    report: Mapped[str | None] = mapped_column(Text)
+    sources: Mapped[list[Any]] = mapped_column(server_default="[]")
+    error: Mapped[str | None] = mapped_column(Text)
+    requested_at: Mapped[datetime] = created_at()
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class LibraryChunk(Base):
+    """A passage of the owner's own material (Drive documents, research reports), embedded on
+    the Mac for search by meaning."""
+
+    __tablename__ = "library_chunks"
+    __table_args__ = (
+        UniqueConstraint("source", "source_id", "chunk", name="uq_library_chunks_source_chunk"),
+        one_of("source", ("drive", "report")),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    source: Mapped[str] = mapped_column(String(8))
+    source_id: Mapped[str] = mapped_column(Text)  # Drive file id or report ref
+    title: Mapped[str] = mapped_column(Text)
+    version: Mapped[str] = mapped_column(Text)  # Drive modifiedTime, to re-index changed files
+    chunk: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(LIBRARY_DIMENSIONS))
+    indexed_at: Mapped[datetime] = created_at()
+
+
+class ActivityEntry(Base):
+    """What was in front on the Mac, once a minute (activity journal). Private apps and sites
+    are stored as "(private)" without a title; idle minutes aren't stored."""
+
+    __tablename__ = "activity_log"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    app: Mapped[str] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    domain: Mapped[str | None] = mapped_column(Text)

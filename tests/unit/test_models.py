@@ -21,6 +21,9 @@ EXPECTED_TABLES = {
     "briefing_items",
     "heartbeats",
     "research_highlights",
+    "research_reports",
+    "library_chunks",
+    "activity_log",
 }
 
 

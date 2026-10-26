@@ -4,15 +4,16 @@
 #
 #   standby   watches the cloud server and runs the Telegram bot on the Mac while it's down
 #   telegram  the Telegram bot itself; the standby starts and stops it, deploy.sh stops it
+#   watch     the activity journal: what's in front on the Mac, once a minute
 #
-# Usage:  infra/launchd/mentor-service.sh standby|telegram            install or update, then start
-#         infra/launchd/mentor-service.sh standby|telegram uninstall  stop and remove
+# Usage:  infra/launchd/mentor-service.sh standby|telegram|watch            install or update, then start
+#         infra/launchd/mentor-service.sh standby|telegram|watch uninstall  stop and remove
 set -euo pipefail
 
 NAME="${1:-}"
 case "$NAME" in
-  standby | telegram) ;;
-  *) echo "Usage: $0 standby|telegram [uninstall]" >&2; exit 1 ;;
+  standby | telegram | watch) ;;
+  *) echo "Usage: $0 standby|telegram|watch [uninstall]" >&2; exit 1 ;;
 esac
 LABEL="com.mentor.$NAME"
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

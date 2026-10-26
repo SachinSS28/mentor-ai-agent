@@ -117,6 +117,27 @@ def read(url: str, question: str = "", client: httpx.Client | None = None) -> st
     return cut((results[0].get("raw_content") or "").strip(), PAGE_CHARS)
 
 
+def read_many(urls: list[str], question: str, client: httpx.Client | None = None) -> dict[str, str]:
+    """Several pages in one request (Tavily charges 1 credit per 5 pages read): the parts most
+    relevant to the question, by URL. Pages that fail are left out; LinkedIn is never read."""
+    wanted = [u for u in urls if not is_blocked(u)][:20]
+    if not wanted:
+        return {}
+    body: dict[str, Any] = {
+        "urls": wanted,
+        "extract_depth": "basic",
+        "format": "markdown",
+        "query": question,
+        "chunks_per_source": 5,
+    }
+    data = post("/extract", body, client)
+    return {
+        r["url"]: cut((r.get("raw_content") or "").strip(), PAGE_CHARS)
+        for r in data.get("results") or []
+        if r.get("url") and r.get("raw_content")
+    }
+
+
 def untrusted(body: str) -> str:
     """Web text is data, never instructions; wrapping it lets the model tell the difference."""
     return (

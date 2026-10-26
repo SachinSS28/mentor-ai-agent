@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     # Web search and page reading (Tavily's free plan: 1,000 credits a month, no card).
     tavily_api_key: SecretStr | None = None
+    # Optional: Semantic Scholar's free key makes its paper summaries (TLDRs) reliable.
+    semantic_scholar_api_key: SecretStr | None = None
     telegram_bot_token: SecretStr | None = None
     telegram_allowed_chat_id: int | None = None
     # Outside the repo, owner-only permissions; Secrets Manager from Phase 1.

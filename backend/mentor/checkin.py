@@ -7,9 +7,10 @@ from datetime import datetime, time, timedelta
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from mentor.agent.app import mentor_system_prompt
+from mentor import activity
 from mentor.agent.graph import CLAIMED_ACTION
 from mentor.agent.models import get_chat_model
+from mentor.agent.prompts import mentor_system_prompt
 from mentor.charter import CheckinConfig, get_charter, owner_timezone
 from mentor.db.models import Task
 from mentor.db.state import get_state, set_state
@@ -102,6 +103,8 @@ def facts(now: datetime) -> list[str]:
         found.append(task_line("Other open tasks", later))
     if not found:
         found.append("No open tasks on the list")
+    if recent := recent_activity(now):
+        found.append(recent)
     try:
         events = calendar.list_events(now.date(), 1, owner_timezone())
         left = [e for e in events if isinstance(e.end, datetime) and e.end > now]
@@ -113,6 +116,20 @@ def facts(now: datetime) -> list[str]:
     except GoogleNotConnectedError:
         pass
     return found
+
+
+def recent_activity(now: datetime, hours: int = 2) -> str | None:
+    """The main things on screen lately, from the activity journal (private time left out)."""
+    try:
+        items = activity.entries(now - timedelta(hours=hours), now)
+    except Exception:
+        return None
+    counted = activity.totals(items, get_charter().activity.every_seconds)
+    counted.pop("Private", None)
+    if not counted:
+        return None
+    top = "; ".join(f"{name} ({activity.duration(m)})" for name, m in counted.most_common(4))
+    return f"At the Mac in the last {hours} hours: {top}"
 
 
 def compose(now: datetime, focus: int, found: list[str]) -> str:
