@@ -207,7 +207,10 @@ def serve() -> None:
 def login() -> None:
     """The one-time sign-in: LinkedIn opens in the server's own browser window, and the owner
     types their password and code there."""
-    print("A LinkedIn window opens: sign in there (your password never passes through Mentor).")
+    print(
+        "A LinkedIn window opens: sign in there (your password never passes through Mentor).",
+        flush=True,
+    )
     subprocess.run(  # noqa: S603 (the pinned server, fixed arguments)
         [uvx(), SERVER, "--login", "--no-auto-import"], env=server_env(), check=False
     )

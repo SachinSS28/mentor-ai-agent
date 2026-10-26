@@ -71,13 +71,18 @@ def test_linkedin_people_become_contacts_once(
     new_database: NewDatabase, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     new_database("mentor_test_linkedin_people")
-    monkeypatch.setattr(tools, "linkedin", FakeGateway({"search_people": SEARCH_PEOPLE}))
+    gateway = FakeGateway({"search_people": SEARCH_PEOPLE})
+    monkeypatch.setattr(tools, "linkedin", gateway)
 
     reply = linkedin_people.invoke({"keywords": "leak detection"})
+    assert gateway.asked == [
+        ("search_people", {"keywords": "leak detection Hong Kong", "location": "Hong Kong"})
+    ]
     assert "P1 Chan Tai Man — Water Supplies Department · suggested" in reply
-    assert "Senior Engineer at Water Supplies Department · Hong Kong SAR" in reply
+    assert "Leak Detection Engineer · Hong Kong SAR · now Senior Engineer at" in reply
     assert "[LinkedIn profile](https://www.linkedin.com/in/chan-tai-man-123/)" in reply
     assert "publications" not in reply and "Describe people only from" in reply
+    assert "monthly limit for people searches" in reply
 
     track_contact.invoke({"person": "P1", "status": "invited"})
     again = linkedin_people.invoke({"keywords": "leak detection"})

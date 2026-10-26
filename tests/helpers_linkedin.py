@@ -1,68 +1,95 @@
-"""LinkedIn server answers in the shape the server documents (raw text per section, plus the
-links found on the page). Made-up jobs, companies and people."""
+"""LinkedIn server answers laid out as the real ones are (checked against live answers on 26 Oct
+2026: relative links, blank lines, "• 2nd" badges, "Current:" lines), with made-up jobs,
+companies and people."""
 
 from typing import Any
 
 SEARCH_JOBS: dict[str, Any] = {
     "url": "https://www.linkedin.com/jobs/search/?keywords=wastewater&location=Hong%20Kong",
+    "total": {"count": 3158, "exact": True},
+    "job_ids": ["4100000101", "4100000102", "4100000103"],
+    "promoted_job_ids": ["4100000101"],
     "sections": {
         "search_results": "\n".join(
             [
-                "Wastewater in Hong Kong",
+                "wastewater engineer in Hong Kong SAR",
+                "3,158 results",
+                "Set alert",
+                "Jump to active job details",
+                "",
                 "Senior Wastewater Engineer",
-                "Senior Wastewater Engineer with verification",
                 "Harbour Water Consultants",
-                "Hong Kong SAR (On-site)",
+                "Hong Kong, Hong Kong SAR (Hybrid)",
+                "4 connections work here",
+                "Viewed",
                 "Promoted",
-                "Easy Apply",
-                "3 connections work here",
                 "Hydraulic Modeller",
-                "Hydraulic Modeller",
+                "Hydraulic Modeller with verification",
                 "Kowloon Engineering Ltd",
-                "Kowloon, Hong Kong SAR",
-                "2 days ago",
-                "Actively reviewing applicants",
+                "Kowloon, Hong Kong SAR (On-site)",
+                "60 school alumni work here",
+                "Be an early applicant",
+                "Easy Apply",
             ]
         )
     },
-    "job_ids": ["4100000101", "4100000102", "4100000103"],
     "references": {
         "search_results": [
             {
                 "kind": "job",
-                "url": "https://www.linkedin.com/jobs/view/4100000101/",
-                "text": "Senior Wastewater Engineer with verification",
-            },
-            {
-                "kind": "company",
-                "url": "https://www.linkedin.com/company/harbour-water/",
-                "text": "Harbour Water Consultants",
+                "url": "/jobs/view/4100000101/",
+                "text": "Senior Wastewater Engineer",
+                "context": "job result",
             },
             {
                 "kind": "job",
-                "url": "https://www.linkedin.com/jobs/view/4100000102/",
+                "url": "/jobs/view/4100000102/",
                 "text": "Hydraulic Modeller",
+                "context": "job result",
             },
-            {"kind": "job", "url": "https://www.linkedin.com/jobs/view/4100000103/"},  # no title
+            {"kind": "job", "url": "/jobs/view/4100000103/", "context": "job result"},  # no title
+            {
+                "kind": "company",
+                "url": "/company/harbour-water/",
+                "text": "Harbour Water Consultants logo",
+                "context": "search result",
+            },
         ]
     },
 }
 
 SEARCH_PEOPLE: dict[str, Any] = {
-    "url": "https://www.linkedin.com/search/results/people/?keywords=leak%20detection",
+    "url": "https://www.linkedin.com/search/results/people/?keywords=leak+detection+Hong+Kong",
     "sections": {
         "search_results": "\n".join(
             [
-                "Chan Tai Man",
-                "• 2nd",
-                "Senior Engineer at Water Supplies Department",
+                "Chan Tai Man • 2nd",
+                "",
+                "Leak Detection Engineer",
+                "",
                 "Hong Kong SAR",
+                "",
                 "Connect",
-                "Wong Mei Ling",
-                "Wong Mei Ling • 3rd+",
+                "",
+                "Current: Senior Engineer  at Water Supplies Department",
+                "",
+                "Lee Ka Wai is a mutual connection",
+                "",
+                "Wong Mei Ling ",
+                " • 3rd+",
+                "",
                 "Associate Professor, Civil Engineering",
+                "",
                 "Hong Kong",
+                "",
                 "Follow",
+                "",
+                "Sachin, you might benefit from unlimited search",
+                "You’ve reached the monthly limit for profile searches. Upgrade to search without "
+                "limits.",
+                "LinkedIn Member",
+                "Field Inspector | Leak Detection",
+                "View",
             ]
         )
     },
@@ -70,23 +97,21 @@ SEARCH_PEOPLE: dict[str, Any] = {
         "search_results": [
             {
                 "kind": "person",
-                "url": "https://www.linkedin.com/in/chan-tai-man-123/",
-                "text": "View Chan Tai Man’s profile",
-            },
-            {
-                "kind": "person",
-                "url": "https://www.linkedin.com/in/chan-tai-man-123/",
+                "url": "/in/chan-tai-man-123/",
                 "text": "Chan Tai Man",
+                "context": "search result",
             },
             {
                 "kind": "person",
-                "url": "https://www.linkedin.com/in/wongmeiling/?miniProfileUrn=x",
-                "text": "Wong Mei Ling • 3rd+",
+                "url": "/in/lee-ka-wai-9/",  # only mentioned as a mutual connection
+                "text": "Lee Ka Wai",
+                "context": "search result",
             },
             {
-                "kind": "company",
-                "url": "https://www.linkedin.com/company/wsd/",
-                "text": "Water Supplies Department",
+                "kind": "person",
+                "url": "/in/wongmeiling/",
+                "text": "View Wong Mei Ling’s profile",
+                "context": "search result",
             },
         ]
     },
@@ -107,12 +132,16 @@ PROFILE: dict[str, Any] = {
 
 POSTS: dict[str, Any] = {
     "url": "https://www.linkedin.com/search/results/content/?keywords=sponge%20city",
-    "sections": {"search_results": "Harbour Water Consultants\n1w\nOur sponge city pilot opens."},
+    "sections": {
+        "search_results": "Feed post\nHarbour Water Consultants\nOct 21\n"
+        "Our sponge city pilot opens."
+    },
     "references": {
         "search_results": [
-            {"kind": "feed_post", "url": "https://www.linkedin.com/feed/update/urn:li:activity:1/"},
-            {"kind": "feed_post", "url": "https://www.linkedin.com/feed/update/urn:li:activity:1/"},
-            {"kind": "company", "url": "https://www.linkedin.com/company/harbour-water/"},
+            {"kind": "company", "url": "/company/harbour-water/", "text": "Harbour Water"},
+            {"kind": "feed_post", "url": "/posts/harbour-water-sponge-city-ugcPost-1-AbCd"},
+            {"kind": "feed_post", "url": "/posts/harbour-water-sponge-city-ugcPost-1-AbCd"},
+            {"kind": "feed_post", "url": "/feed/update/urn:li:ugcPost:1/"},
         ]
     },
 }

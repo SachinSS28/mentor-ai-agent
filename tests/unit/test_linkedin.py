@@ -33,39 +33,42 @@ def test_jobs_come_from_job_links_and_the_lines_after_them() -> None:
         "4100000101",
         "Senior Wastewater Engineer",
         "Harbour Water Consultants",
-        "Hong Kong SAR (On-site)",
+        "Hong Kong, Hong Kong SAR (Hybrid)",
     )
-    assert first.insights == ("Easy Apply", "3 connections work here")
+    assert first.insights == ("4 connections work here",)
     assert first.url == "https://www.linkedin.com/jobs/view/4100000101/"
     assert first.alert == "LinkedIn search: wastewater"
     assert (second.title, second.company, second.location) == (
         "Hydraulic Modeller",
         "Kowloon Engineering Ltd",
-        "Kowloon, Hong Kong SAR",
+        "Kowloon, Hong Kong SAR (On-site)",
     )
-    assert second.insights == ("Actively reviewing applicants",)
+    assert second.insights == ("60 school alumni work here", "Be an early applicant", "Easy Apply")
     # 4100000103 had no title on the page, so it isn't stored without one.
 
 
-def test_people_come_from_profile_links_and_the_lines_after_them() -> None:
-    chan, wong = results.people(SEARCH_PEOPLE)
+def test_people_come_from_profile_links_and_their_own_cards() -> None:
+    chan, wong = results.people(SEARCH_PEOPLE)  # Lee Ka Wai is only a mutual connection
     assert (chan.username, chan.name, chan.headline, chan.location) == (
         "chan-tai-man-123",
         "Chan Tai Man",
-        "Senior Engineer at Water Supplies Department",
+        "Leak Detection Engineer",
         "Hong Kong SAR",
     )
+    assert chan.current == "Senior Engineer at Water Supplies Department"
     assert chan.organization == "Water Supplies Department"
     assert chan.url == "https://www.linkedin.com/in/chan-tai-man-123/"
-    assert (wong.username, wong.name, wong.headline) == (
+    assert chan.about == (
+        "Leak Detection Engineer · Hong Kong SAR · now Senior Engineer at Water Supplies Department"
+    )
+    assert (wong.username, wong.name, wong.headline, wong.location) == (
         "wongmeiling",
         "Wong Mei Ling",
         "Associate Professor, Civil Engineering",
+        "Hong Kong",
     )
-    assert (
-        wong.organization is None
-        and wong.about == "Associate Professor, Civil Engineering · Hong Kong"
-    )
+    assert wong.organization is None
+    assert results.search_limited(SEARCH_PEOPLE) and not results.search_limited(SEARCH_JOBS)
 
 
 def test_links_and_page_text() -> None:
@@ -75,8 +78,14 @@ def test_links_and_page_text() -> None:
     assert results.profile_username("https://hk.linkedin.com/in/chan-tai-man-123?x=1") == (
         "chan-tai-man-123"
     )
+    assert results.profile_username("/in/wongmeiling/") == "wongmeiling"
+    assert results.profile_username("https://example.org/in/someone") is None
     assert results.company_slug("https://www.linkedin.com/company/wsd/about/") == "wsd"
-    assert results.post_links(POSTS) == ["https://www.linkedin.com/feed/update/urn:li:activity:1/"]
+    assert results.company_slug("/company/arup/") == "arup"
+    assert results.post_links(POSTS) == [
+        "https://www.linkedin.com/posts/harbour-water-sponge-city-ugcPost-1-AbCd",
+        "https://www.linkedin.com/feed/update/urn:li:ugcPost:1/",
+    ]
     long = {"sections": {"a": "line\n" * 500}}
     assert len(results.page_text(long, 100)) <= 102
     assert [results.date_posted(d) for d in (1, 7, 30, 90)] == [
@@ -267,3 +276,28 @@ def test_the_server_is_pinned_and_kept_from_other_browsers() -> None:
     assert gateway.SERVER == "mcp-server-linkedin==4.28.0"
     assert {"--no-auto-import", "--no-daemon"} <= set(gateway.SERVER_FLAGS)
     assert gateway.SERVER_ENV == {"LINKEDIN_MCP_CHECK_FOR_UPDATES": "off"}
+
+
+def test_blocked_look_ups_say_why_and_give_linkedins_own_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mentor.agent import tools
+
+    def blocked(tool: str, **arguments: Any) -> dict[str, Any]:
+        raise client.LinkedInUnavailable("8 LinkedIn look-ups in the last hour; more from 17:40.")
+
+    monkeypatch.setattr(tools, "linkedin", blocked)
+    jobs = tools.linkedin_jobs.invoke({"keywords": "wastewater engineer"})
+    assert jobs == (
+        "Not looked up on LinkedIn: 8 LinkedIn look-ups in the last hour; more from 17:40. "
+        "Say that in one line and give the owner this link to open it themselves: "
+        "https://www.linkedin.com/jobs/search/?keywords=wastewater+engineer&location=Hong+Kong"
+    )
+    people = tools.linkedin_people.invoke({"keywords": "leak detection"})
+    assert people.endswith(
+        "https://www.linkedin.com/search/results/people/?keywords=leak+detection+Hong+Kong"
+    )
+    posts = tools.linkedin_posts.invoke({"keywords": "sponge city"})
+    assert posts.endswith("https://www.linkedin.com/search/results/content/?keywords=sponge+city")
+    page = tools.linkedin_read.invoke({"item": "https://www.linkedin.com/company/arup/"})
+    assert page.endswith("open it themselves: https://www.linkedin.com/company/arup/")

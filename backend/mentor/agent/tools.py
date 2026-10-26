@@ -443,8 +443,11 @@ LINKEDIN_RULES = (
 )
 
 
-def not_looked_up(error: LinkedInUnavailable) -> str:
-    return f"Not looked up on LinkedIn: {error}"
+def not_looked_up(error: LinkedInUnavailable, link: str) -> str:
+    return (
+        f"Not looked up on LinkedIn: {error} Say that in one line and give the owner this link to "
+        f"open it themselves: {link}"
+    )
 
 
 @tool
@@ -465,7 +468,7 @@ def linkedin_jobs(
             date_posted=linkedin_results.date_posted(days),
         )
     except LinkedInUnavailable as error:
-        return not_looked_up(error)
+        return not_looked_up(error, linkedin_results.search_link("jobs", keywords, location))
     postings = linkedin_results.jobs(data, f"LinkedIn search: {keywords}")
     if not postings:
         return f"LinkedIn shows no jobs for {keywords!r} in {location} in the last {days} days."
@@ -492,17 +495,26 @@ def linkedin_people(keywords: str, location: str = "Hong Kong", limit: int = 8) 
     """Search LinkedIn for people to network with, through the owner's own LinkedIn session, e.g.
     "leak detection Water Supplies Department". Each gets a number like P12 and their LinkedIn
     profile link; track them with track_contact. The owner connects; offer a short note."""
+    place = location.strip()
+    # LinkedIn ignores the place as a filter, so it goes into the search words too.
+    words = keywords if place.lower() in keywords.lower() else f"{keywords} {place}".strip()
     try:
-        data = linkedin("search_people", keywords=keywords, location=location.strip() or None)
+        data = linkedin("search_people", keywords=words, location=place or None)
     except LinkedInUnavailable as error:
-        return not_looked_up(error)
+        return not_looked_up(error, linkedin_results.search_link("people", words))
     found = linkedin_results.people(data)[: max(1, min(limit, 15))]
+    limited = (
+        "\nLinkedIn showed only a few people: the owner's account has reached LinkedIn's monthly "
+        "limit for people searches (free accounts); it resets next month. find_experts still works."
+        if linkedin_results.search_limited(data)
+        else ""
+    )
     if not found:
-        return f"LinkedIn shows no people for {keywords!r} in {location}."
+        return f"LinkedIn shows no people for {words!r}.{limited}"
     people = contacts.save_linkedin(found, datetime.now(owner_timezone()))
     listing = "\n".join(format_contact(person) for person in people)
-    return untrusted("linkedin", f"LinkedIn people for {keywords!r}:\n{listing}") + (
-        f"\nDescribe people only from what is written here. {LINKEDIN_RULES}"
+    return untrusted("linkedin", f"LinkedIn people for {words!r}:\n{listing}") + (
+        f"\nDescribe people only from what is written here. {LINKEDIN_RULES}{limited}"
     )
 
 
@@ -514,7 +526,7 @@ def linkedin_posts(keywords: str, days: int = 7) -> str:
     try:
         data = linkedin("search_posts", keywords=keywords, date_posted=recency)
     except LinkedInUnavailable as error:
-        return not_looked_up(error)
+        return not_looked_up(error, linkedin_results.search_link("posts", keywords))
     text = linkedin_results.page_text(data, 6000)
     if not text:
         return f"LinkedIn shows no recent posts on {keywords!r}."
@@ -527,13 +539,15 @@ def linkedin_posts(keywords: str, days: int = 7) -> str:
 def linkedin_read(item: str) -> str:
     """Read a LinkedIn job, profile or company page in full: a job number like J12, a contact
     number like P12, or a LinkedIn job, profile or company link. Use it for cover letters, CV
-    points and connection notes."""
+    points and connection notes. Opening a profile shows in that person's "Who viewed your
+    profile", so open profiles only of people the owner asked about."""
     item = item.strip()
+    link = item
     if item[:1] in "Jj" and item[1:].isdigit():
         job = store.by_ref(int(item[1:]))
         if job is None:
             return f"There's no job {item.upper()} on the Job Desk."
-        tool_name, args = "get_job_details", {"job_id": job.external_id}
+        tool_name, args, link = "get_job_details", {"job_id": job.external_id}, job.url
     elif item[:1] in "Pp" and item[1:].isdigit():
         known = contacts.linkedin_username(int(item[1:]))
         if known is None:
@@ -545,6 +559,7 @@ def linkedin_read(item: str) -> str:
                 f"search for them with linkedin_people ({person.name} {person.organization or ''})."
             )
         tool_name, args = "get_person_profile", {"linkedin_username": username}
+        link = person.profile_url or item
     elif job_id := linkedin_results.job_id(item):
         tool_name, args = "get_job_details", {"job_id": job_id}
     elif username := linkedin_results.profile_username(item):
@@ -556,7 +571,7 @@ def linkedin_read(item: str) -> str:
     try:
         data = linkedin(tool_name, **args)
     except LinkedInUnavailable as error:
-        return not_looked_up(error)
+        return not_looked_up(error, link)
     text = linkedin_results.page_text(data, 8000)
     page = data.get("url") or item
     return untrusted("linkedin", f"LinkedIn page {page}:\n{text or '(nothing readable)'}")

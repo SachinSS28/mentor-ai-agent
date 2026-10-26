@@ -10,12 +10,15 @@ import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import quote_plus
 
 from mentor.jobs.alerts import Posting
 
+# LinkedIn's own links are relative ("/in/x/"); links the owner pastes are full addresses.
 JOB_LINK = re.compile(r"/jobs/view/(?:[^/?#]*-)?(\d{6,})")
-PROFILE_LINK = re.compile(r"linkedin\.com/in/([^/?#]+)")
-COMPANY_LINK = re.compile(r"linkedin\.com/company/([^/?#]+)")
+PROFILE_LINK = re.compile(r"(?:^|linkedin\.com)/in/([^/?#]+)")
+COMPANY_LINK = re.compile(r"(?:^|linkedin\.com)/company/([^/?#]+)")
+SITE = "https://www.linkedin.com"
 VERIFIED = re.compile(r"\s+with verification$", re.IGNORECASE)
 # "View Chan Tai Man's profile", "Chan Tai Man • 2nd" -> "Chan Tai Man"
 PROFILE_LABEL = re.compile(r"^view\s+(.+?)[’']s\s+profile$", re.IGNORECASE)
@@ -25,7 +28,8 @@ NOISE = re.compile(
     r"^(?:promoted|viewed|applied|saved|dismiss\b.*|new|verified|connect|message|follow|"
     r"following|pending|save|share|more|show all.*|[•·|]|"
     r"\d+\s*(?:second|minute|hour|day|week|month|year)s?\s+ago|"
-    r"reposted\b.*|posted\b.*|status is \w+|view .*profile|(?:1st|2nd|3rd\+?)(?: degree.*)?)$",
+    r"reposted\b.*|posted\b.*|status is \w+|view .*profile|(?:1st|2nd|3rd\+?)(?: degree.*)?|"
+    r"view|feed post|… more|.* is a mutual connection|.*\bmutual connections?\b.*)$",
     re.IGNORECASE,
 )
 # Lines worth keeping with a job, as the alert emails' insights are.
@@ -34,6 +38,9 @@ INSIGHT = re.compile(
     re.IGNORECASE,
 )
 CARD_LINES = 8  # lines read after a title or name
+# Free accounts get a monthly number of people searches; past it LinkedIn shows only a few.
+SEARCH_LIMIT = re.compile(r"monthly limit for profile searches|commercial use limit", re.IGNORECASE)
+CURRENT = re.compile(r"^current:\s*(.+)$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -42,21 +49,24 @@ class LinkedInPerson:
     name: str
     headline: str | None = None
     location: str | None = None
+    current: str | None = None  # "Senior Engineer at WSD", when LinkedIn shows it
 
     @property
     def url(self) -> str:
-        return f"https://www.linkedin.com/in/{self.username}/"
+        return f"{SITE}/in/{self.username}/"
 
     @property
     def organization(self) -> str | None:
-        """Where they work, when the headline says ("Senior Engineer at WSD")."""
-        if self.headline and " at " in self.headline:
-            return self.headline.rsplit(" at ", 1)[1].strip(" .|") or None
+        """Where they work, when their current role or headline says ("... at WSD")."""
+        for role in (self.current, self.headline):
+            if role and " at " in role:
+                return role.rsplit(" at ", 1)[1].strip(" .|") or None
         return None
 
     @property
     def about(self) -> str:
-        return " · ".join(part for part in (self.headline, self.location) if part)
+        now = f"now {self.current}" if self.current and self.current != self.headline else None
+        return " · ".join(part for part in (self.headline, self.location, now) if part)
 
 
 def references(data: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
@@ -72,24 +82,33 @@ def references(data: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
 def page_lines(data: Mapping[str, Any]) -> list[str]:
     sections = data.get("sections") or {}
     text = "\n".join(str(t) for t in sections.values()) if isinstance(sections, Mapping) else ""
-    return [line.strip() for line in text.splitlines() if line.strip()]
+    return [" ".join(line.split()) for line in text.splitlines() if line.strip()]
 
 
-def card(lines: list[str], anchor: str, others: set[str]) -> list[str]:
-    """The useful lines after the first line that is the anchor (a title or name), up to the next
-    card's anchor."""
+def plain(line: str) -> str:
+    """A line without LinkedIn's badges ("• 2nd", "with verification")."""
+    return VERIFIED.sub("", DEGREE.sub("", line)).strip()
+
+
+def absolute(url: str) -> str:
+    return f"{SITE}{url}" if url.startswith("/") else url
+
+
+def card(lines: list[str], anchor: str, others: set[str]) -> list[str] | None:
+    """The useful lines after the line that is the anchor (a title or name), up to the next
+    card's anchor. None when no line is the anchor (e.g. a name only mentioned in passing)."""
     key = anchor.casefold()
     for i, line in enumerate(lines):
-        if line.casefold() == key or VERIFIED.sub("", line).casefold() == key:
+        if plain(line).casefold() == key:
             following = []
             for later in lines[i + 1 : i + 1 + CARD_LINES]:
-                plain = VERIFIED.sub("", DEGREE.sub("", later)).strip()
-                if plain.casefold() in others:
+                text = plain(later)
+                if text.casefold() in others:
                     break
-                if plain and plain.casefold() != key and not NOISE.match(plain):
-                    following.append(plain)
+                if text and text.casefold() != key and not NOISE.match(text):
+                    following.append(text)
             return following
-    return []
+    return None
 
 
 def job_titles(data: Mapping[str, Any]) -> dict[str, str]:
@@ -115,7 +134,7 @@ def jobs(data: Mapping[str, Any], alert: str) -> list[Posting]:
         title = titles.get(job_id)
         if not title:
             continue
-        rest = card(lines, title, others - {title.casefold()})
+        rest = card(lines, title, others - {title.casefold()}) or []
         details = [line for line in rest if not INSIGHT.search(line)]
         postings.append(
             Posting(
@@ -152,19 +171,29 @@ def people(data: Mapping[str, Any]) -> list[LinkedInPerson]:
     found = []
     for username, name in names.items():
         rest = card(lines, name, others - {name.casefold()})
+        if rest is None:  # e.g. "Yusuf Fidan is a mutual connection"
+            continue
+        current = next((m.group(1) for line in rest if (m := CURRENT.match(line))), None)
+        details = [line for line in rest if not CURRENT.match(line)]
         found.append(
             LinkedInPerson(
                 username=username,
                 name=name,
-                headline=rest[0] if rest else None,
-                location=rest[1] if len(rest) > 1 else None,
+                headline=details[0] if details else None,
+                location=details[1] if len(details) > 1 else None,
+                current=current,
             )
         )
     return found
 
 
+def search_limited(data: Mapping[str, Any]) -> bool:
+    """Whether LinkedIn cut a people search short (the account's monthly limit)."""
+    return any(SEARCH_LIMIT.search(line) for line in page_lines(data))
+
+
 def post_links(data: Mapping[str, Any], limit: int = 10) -> list[str]:
-    links = [i["url"] for i in references(data) if i.get("kind") == "feed_post"]
+    links = [absolute(i["url"]) for i in references(data) if i.get("kind") == "feed_post"]
     return list(dict.fromkeys(links))[:limit]
 
 
@@ -201,3 +230,14 @@ def profile_username(text: str) -> str | None:
 def company_slug(text: str) -> str | None:
     match = COMPANY_LINK.search(text)
     return match.group(1) if match else None
+
+
+def search_link(kind: str, words: str, location: str = "") -> str:
+    """LinkedIn's own search page for jobs, people or posts, for the owner to open."""
+    query = quote_plus(words.strip())
+    if kind == "jobs":
+        place = f"&location={quote_plus(location.strip())}" if location.strip() else ""
+        return f"{SITE}/jobs/search/?keywords={query}{place}"
+    if kind == "people":
+        return f"{SITE}/search/results/people/?keywords={query}"
+    return f"{SITE}/search/results/content/?keywords={query}"
