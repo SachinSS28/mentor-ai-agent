@@ -516,7 +516,8 @@ def search_papers(query: str, since_year: int = 0, limit: int = 8) -> str:
     (like W4391234567), year, journal, citations, field-weighted impact (FWCI; 1.0 is the world
     average) and whether it is open access. Read one with read_paper.
 
-    since_year: only papers from this year on; 0 for any year.
+    since_year: only papers from this year on; for "recent" or "latest", about three years
+    back from today; 0 for any year.
     """
     try:
         papers = scholar.search(query, since_year, max(1, min(limit, 15)))
