@@ -91,7 +91,9 @@ def test_activity_journal_summaries_and_pause(new_database: NewDatabase) -> None
     activity.record(ActivityEntry(at=now - timedelta(days=9), app="Old", title="gone"))
 
     reply = my_activity.invoke({"period": "last 2 hours"})
+    shown_at = f"{now - timedelta(minutes=1):%H:%M}"
     assert reply == (
+        f"In front now ({shown_at}): Safari — IELTS\n"
         "Activity for the last 2 hours:\nActive at the Mac: 35 min\n"
         "- Safari — IELTS: 30 min\n- Private: 5 min"
     )

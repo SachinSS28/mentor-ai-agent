@@ -179,6 +179,13 @@ def entries(start: datetime, end: datetime) -> list[ActivityEntry]:
         return list(session.scalars(query.order_by(ActivityEntry.at)))
 
 
+def latest(now: datetime, within: timedelta = timedelta(minutes=3)) -> ActivityEntry | None:
+    """What's in front on the Mac now: the newest entry, if it's recent."""
+    query = select(ActivityEntry).where(ActivityEntry.at >= now - within, ActivityEntry.at <= now)
+    with get_sessionmaker()() as session:
+        return session.scalars(query.order_by(ActivityEntry.at.desc()).limit(1)).first()
+
+
 def totals(items: list[ActivityEntry], every_seconds: int = 60) -> Counter[str]:
     """Minutes per activity (each entry stands for one sampling interval)."""
     minutes = every_seconds / 60

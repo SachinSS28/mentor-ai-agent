@@ -599,12 +599,19 @@ def search_my_documents(query: str, limit: int = 5) -> str:
 
 @tool
 def my_activity(period: str = "today") -> str:
-    """What the owner has been doing at the Mac, from the activity journal: time per app,
-    document and web page. period: today, yesterday, last 2 hours (any number) or week."""
+    """What's on the owner's Mac screen now and what they've been doing there, from the activity
+    journal: the app, document or web page in front, and time per item. Use it whenever the owner
+    asks if you can see their screen or what they're working on. period: today, yesterday,
+    last 2 hours (any number) or week."""
     now = datetime.now(owner_timezone())
     start, end, name = activity.period(period, now)
     text = activity.summary(start, end)
-    lines = (
+    lines = []
+    if current := activity.latest(now):
+        lines.append(
+            f"In front now ({current.at.astimezone(now.tzinfo):%H:%M}): {activity.label(current)}"
+        )
+    lines += (
         [f"Activity for {name}:", text]
         if text
         else [
