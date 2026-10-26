@@ -91,6 +91,14 @@ def test_markdown_is_shown_as_telegram_formatting() -> None:
     )
 
 
+def test_a_link_set_as_code_stays_clickable() -> None:
+    reply = "Link: `https://www.linkedin.com/jobs/view/4418482316/` and `git status`"
+    assert to_telegram_html(reply) == (
+        'Link: <a href="https://www.linkedin.com/jobs/view/4418482316/">'
+        "https://www.linkedin.com/jobs/view/4418482316/</a> and <code>git status</code>"
+    )
+
+
 def test_formatting_leaves_code_and_stray_symbols_alone() -> None:
     reply = "2 * 3 * 4 and snake_case\n```\nif a < b: print('**x**')\n```"
     assert to_telegram_html(reply) == (

@@ -13,6 +13,7 @@ BULLET = re.compile(r"^(\s*)[*-]\s+", re.MULTILINE)
 BOLD = re.compile(r"\*\*(?=\S)(.+?)(?<=\S)\*\*")
 ITALIC = re.compile(r"(?<![*\w])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![*\w])")
 LINK = re.compile(r"\[([^\]\n]+)\]\((https?://[^)\s\"]+)\)")
+URL = re.compile(r"https?://[^\s<>\"]+")
 STASHED = re.compile(r"\x00(\d+)\x00")
 
 
@@ -24,6 +25,9 @@ def to_telegram_html(markdown: str) -> str:
         block, inline = match.groups()
         if block is not None:
             code.append(f"<pre>{html.escape(block.strip(), quote=False)}</pre>")
+        elif URL.fullmatch(inline.strip()):  # a link set as code isn't clickable: keep it a link
+            url = html.escape(inline.strip())
+            code.append(f'<a href="{url}">{url}</a>')
         else:
             code.append(f"<code>{html.escape(inline, quote=False)}</code>")
         return f"\x00{len(code) - 1}\x00"

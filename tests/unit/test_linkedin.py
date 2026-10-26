@@ -301,3 +301,9 @@ def test_blocked_look_ups_say_why_and_give_linkedins_own_link(
     assert posts.endswith("https://www.linkedin.com/search/results/content/?keywords=sponge+city")
     page = tools.linkedin_read.invoke({"item": "https://www.linkedin.com/company/arup/"})
     assert page.endswith("open it themselves: https://www.linkedin.com/company/arup/")
+
+
+def test_tests_never_reach_the_real_gateway() -> None:
+    # tests/conftest.py points every test away from the gateway running on this Mac.
+    with pytest.raises(client.LinkedInUnavailable, match="isn't set up on the Mac yet"):
+        client.call("search_jobs", keywords="anything")

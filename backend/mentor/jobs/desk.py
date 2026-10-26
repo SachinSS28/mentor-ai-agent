@@ -28,10 +28,11 @@ PROFILE_LAYERS = ("profile", "goal", "preference")
 SCORING_PROMPT = """You rate how well jobs fit {owner}, as {owner}'s career mentor. Score each job \
 from 0 to 100: 90 or more is an excellent fit for their background and focus, 70-89 a good fit, \
 50-69 worth a look, below 50 a poor fit (wrong field, far too junior or senior, or outside \
-{locations}). Give a reason of at most 15 words, naming what matches or what doesn't.
+{locations}). Give a reason of at most 15 words, naming what matches or what doesn't, \
+written to {owner} as "you" (never "he" or "she").
 
 Answer with one line per job and nothing else, exactly like this:
-J12 | 85 | Water utility hydraulics role, matches the PhD research
+J12 | 85 | Water utility hydraulics role, matches your PhD research
 
 {owner}'s focus, in order of preference:
 {focus}
