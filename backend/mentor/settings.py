@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     # Outside the repo, owner-only permissions; Secrets Manager from Phase 1.
     google_client_secret_path: Path = PRIVATE_DIR / "google_client_secret.json"
     google_token_path: Path = PRIVATE_DIR / "google_token.json"
+    # LinkedIn, through Mentor's read-only gateway on the Mac (`mentor linkedin`), which makes its
+    # own token on first start. The bot's container reaches it at host.docker.internal.
+    linkedin_gateway_url: str = "http://127.0.0.1:8765/mcp"
+    linkedin_token_path: Path = PRIVATE_DIR / "linkedin_gateway_token"
 
 
 @lru_cache

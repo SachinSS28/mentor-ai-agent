@@ -3,6 +3,7 @@
 From Phase 1 these move into MCP servers (mentor-core, google-tools) behind Sentinel.
 """
 
+import logging
 import uuid
 from datetime import UTC, date, datetime, time, timedelta
 from typing import cast, get_args
@@ -13,12 +14,15 @@ from langchain_core.tools import BaseTool, tool
 from sqlalchemy import select
 
 from mentor import activity
-from mentor.agent.models import load_models_config
+from mentor.agent.models import get_chat_model, load_models_config
 from mentor.briefing import store as briefing_store
 from mentor.charter import get_charter, owner_timezone
 from mentor.db.models import Job, Memory, Person, Task
 from mentor.db.session import get_sessionmaker
 from mentor.jobs import desk, store
+from mentor.linkedin import results as linkedin_results
+from mentor.linkedin.client import LinkedInUnavailable
+from mentor.linkedin.client import call as linkedin
 from mentor.mcp_servers.google_tools import calendar, drive, gmail
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 from mentor.mcp_servers.mentor_core import memory, tasks
@@ -27,6 +31,8 @@ from mentor.mcp_servers.web_tools import search as web
 from mentor.network import desk as network
 from mentor.network import store as contacts
 from mentor.research import library, reports, scholar
+
+log = logging.getLogger(__name__)
 
 
 def format_task(task: Task, tz: ZoneInfo) -> str:
@@ -356,8 +362,8 @@ def format_contact(person: Person) -> str:
         parts.append(f"ask {person.follow_up_on:%d %b} whether they accepted")
     if person.notes:
         parts.append(f"notes: {person.notes}")
-    parts.append(f"[LinkedIn search]({network.linkedin_search(person)})")
-    if person.profile_url:
+    parts.append(network.linkedin_link(person))
+    if person.profile_url and person.source == "openalex":
         parts.append(f"[publications]({person.profile_url})")
     return "- " + " · ".join(parts)
 
@@ -431,6 +437,131 @@ def list_contacts(query: str = "", status: str = "", limit: int = 15) -> str:
     return "\n".join(format_contact(p) for p in people)
 
 
+LINKEDIN_RULES = (
+    "The owner presses Connect, Apply and Message on LinkedIn; you prepare the text (connection "
+    "notes under 200 characters). Give links exactly as written here."
+)
+
+
+def not_looked_up(error: LinkedInUnavailable) -> str:
+    return f"Not looked up on LinkedIn: {error}"
+
+
+@tool
+def linkedin_jobs(
+    keywords: str, location: str = "Hong Kong", days: int = 7, limit: int = 10
+) -> str:
+    """Search LinkedIn for jobs, through the owner's own LinkedIn session. The jobs join the Job
+    Desk with numbers like J12 and a fit score, best fit first; then use linkedin_read for the
+    full posting, update_job and draft_email.
+
+    keywords: e.g. "wastewater engineer". days: posted in the last N days.
+    """
+    try:
+        data = linkedin(
+            "search_jobs",
+            keywords=keywords,
+            location=location.strip() or None,
+            date_posted=linkedin_results.date_posted(days),
+        )
+    except LinkedInUnavailable as error:
+        return not_looked_up(error)
+    postings = linkedin_results.jobs(data, f"LinkedIn search: {keywords}")
+    if not postings:
+        return f"LinkedIn shows no jobs for {keywords!r} in {location} in the last {days} days."
+    found, _ = store.save_searched(
+        postings[: max(1, min(limit, 25))], datetime.now(owner_timezone())
+    )
+    if unscored := [job for job in found if job.fit_score is None]:
+        try:
+            prompt = desk.scoring_prompt(get_charter(), desk.owner_profile())
+            desk.score_jobs(get_chat_model("fast"), unscored, prompt)
+        except Exception:
+            log.exception("Scoring LinkedIn jobs failed; listing them unscored")
+        found = [store.by_ref(job.ref) or job for job in found]
+    found.sort(key=lambda job: -1 if job.fit_score is None else -job.fit_score)
+    tz = owner_timezone()
+    listing = "\n".join(format_job_line(job, tz) for job in found)
+    return untrusted("linkedin", f"LinkedIn jobs for {keywords!r} in {location}:\n{listing}") + (
+        f"\n{LINKEDIN_RULES}"
+    )
+
+
+@tool
+def linkedin_people(keywords: str, location: str = "Hong Kong", limit: int = 8) -> str:
+    """Search LinkedIn for people to network with, through the owner's own LinkedIn session, e.g.
+    "leak detection Water Supplies Department". Each gets a number like P12 and their LinkedIn
+    profile link; track them with track_contact. The owner connects; offer a short note."""
+    try:
+        data = linkedin("search_people", keywords=keywords, location=location.strip() or None)
+    except LinkedInUnavailable as error:
+        return not_looked_up(error)
+    found = linkedin_results.people(data)[: max(1, min(limit, 15))]
+    if not found:
+        return f"LinkedIn shows no people for {keywords!r} in {location}."
+    people = contacts.save_linkedin(found, datetime.now(owner_timezone()))
+    listing = "\n".join(format_contact(person) for person in people)
+    return untrusted("linkedin", f"LinkedIn people for {keywords!r}:\n{listing}") + (
+        f"\nDescribe people only from what is written here. {LINKEDIN_RULES}"
+    )
+
+
+@tool
+def linkedin_posts(keywords: str, days: int = 7) -> str:
+    """Recent LinkedIn posts on a topic, through the owner's own LinkedIn session, e.g. "sponge
+    city Hong Kong" or "hiring water engineer": who posted, when and what about."""
+    recency = "past-24h" if days <= 1 else "past-week" if days <= 7 else "past-month"
+    try:
+        data = linkedin("search_posts", keywords=keywords, date_posted=recency)
+    except LinkedInUnavailable as error:
+        return not_looked_up(error)
+    text = linkedin_results.page_text(data, 6000)
+    if not text:
+        return f"LinkedIn shows no recent posts on {keywords!r}."
+    links = "\n".join(f"- {link}" for link in linkedin_results.post_links(data))
+    body = f"LinkedIn posts on {keywords!r}:\n{text}" + (f"\nPost links:\n{links}" if links else "")
+    return untrusted("linkedin", body) + "\nSummarise each post only from the text above."
+
+
+@tool
+def linkedin_read(item: str) -> str:
+    """Read a LinkedIn job, profile or company page in full: a job number like J12, a contact
+    number like P12, or a LinkedIn job, profile or company link. Use it for cover letters, CV
+    points and connection notes."""
+    item = item.strip()
+    if item[:1] in "Jj" and item[1:].isdigit():
+        job = store.by_ref(int(item[1:]))
+        if job is None:
+            return f"There's no job {item.upper()} on the Job Desk."
+        tool_name, args = "get_job_details", {"job_id": job.external_id}
+    elif item[:1] in "Pp" and item[1:].isdigit():
+        known = contacts.linkedin_username(int(item[1:]))
+        if known is None:
+            return f"There's no contact {item.upper()}."
+        person, username = known
+        if username is None:
+            return (
+                f"P{person.ref} {person.name} was found in publication records, not on LinkedIn: "
+                f"search for them with linkedin_people ({person.name} {person.organization or ''})."
+            )
+        tool_name, args = "get_person_profile", {"linkedin_username": username}
+    elif job_id := linkedin_results.job_id(item):
+        tool_name, args = "get_job_details", {"job_id": job_id}
+    elif username := linkedin_results.profile_username(item):
+        tool_name, args = "get_person_profile", {"linkedin_username": username}
+    elif company := linkedin_results.company_slug(item):
+        tool_name, args = "get_company_profile", {"company_name": company}
+    else:
+        return "Give a job number (J12), a contact number (P12) or a LinkedIn link."
+    try:
+        data = linkedin(tool_name, **args)
+    except LinkedInUnavailable as error:
+        return not_looked_up(error)
+    text = linkedin_results.page_text(data, 8000)
+    page = data.get("url") or item
+    return untrusted("linkedin", f"LinkedIn page {page}:\n{text or '(nothing readable)'}")
+
+
 @tool
 def search_web(query: str, recent: str = "", news: bool = False, max_results: int = 5) -> str:
     """Search the web for current information that isn't in the owner's own data: companies and
@@ -460,10 +591,10 @@ def read_webpage(url: str, question: str = "") -> str:
     """Read the text of a web page, e.g. a result from search_web, to answer from it.
 
     question: what you are looking for; for a long page this returns the most relevant parts.
-    LinkedIn pages can't be read.
+    For LinkedIn pages use linkedin_read.
     """
     if web.is_blocked(url):
-        return "LinkedIn pages can't be read; give the owner the link to open."
+        return "LinkedIn pages are read with linkedin_read, not here."
     try:
         text = web.read(url.strip(), question)
     except (web.WebNotConnectedError, web.WebLimitError, ValueError) as error:
@@ -657,6 +788,10 @@ TOOLS: list[BaseTool] = [
     find_experts,
     track_contact,
     list_contacts,
+    linkedin_jobs,
+    linkedin_people,
+    linkedin_posts,
+    linkedin_read,
     search_web,
     read_webpage,
     list_documents,

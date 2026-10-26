@@ -83,6 +83,20 @@ network:
   prefer_international: true   # careers that include institutions outside Hong Kong first
   follow_up_days: 7            # then ask whether a connection request was accepted
 
+linkedin:
+  # Jobs, people and posts read through your own LinkedIn session on the Mac (`mentor linkedin`).
+  # Read-only: you press Connect, Apply and Message. LinkedIn's terms forbid automated use, so
+  # look-ups stay few and spaced, and any pushback from LinkedIn stops them (/linkedin status).
+  enabled: true
+  daily_limit: 25              # look-ups a day; each search or page read is one
+  hourly_limit: 8
+  min_gap_seconds: 20          # between look-ups, plus a random extra of up to 20
+  start: "07:00"               # waking hours only, Hong Kong time
+  end: "22:00"
+  pause_hours: 24              # after LinkedIn asks to slow down
+  daily_search_time: "07:30"   # the morning's job searches, in time for the 08:00 shortlist
+  daily_searches: [water engineer, wastewater, hydraulics, environmental engineering lecturer]
+
 budget:
   monthly_cap_hkd: 500         # all-in: AWS + AI models (about US$64)
   alert_at: [0.5, 0.8, 1.0]

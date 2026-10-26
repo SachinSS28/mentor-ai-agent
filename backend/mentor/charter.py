@@ -92,6 +92,22 @@ class ActivityConfig(BaseModel):
     hide_titles: list[str] = []
 
 
+class LinkedInConfig(BaseModel):
+    """LinkedIn through the owner's own signed-in session, read-only: a few look-ups a day, a
+    pause between them, waking hours only. The owner does every Connect, Apply and Message."""
+
+    enabled: bool = False
+    daily_limit: int = 25  # look-ups a day (each search or page read is one)
+    hourly_limit: int = 8
+    min_gap_seconds: int = 20  # between look-ups, plus a random extra of up to the same again
+    start: str = "07:00"  # owner's time zone
+    end: str = "22:00"
+    pause_hours: int = 24  # after LinkedIn asks to slow down
+    # The morning's job searches for the 08:00 shortlist, in job_search.locations.
+    daily_search_time: str = "07:30"
+    daily_searches: list[str] = []
+
+
 class Charter(BaseModel):
     # Sections not used yet (workspaces, goals, budget, ...) are kept as plain data.
     model_config = ConfigDict(extra="allow")
@@ -105,6 +121,7 @@ class Charter(BaseModel):
     review: ReviewConfig = ReviewConfig()
     checkins: CheckinConfig = CheckinConfig()
     activity: ActivityConfig = ActivityConfig()
+    linkedin: LinkedInConfig = LinkedInConfig()
     # The owner's research topics as exact phrases ("a + b" needs both), for finding people and
     # the research highlights.
     research_topics: dict[str, list[str]] = {}

@@ -66,6 +66,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     commands.add_parser(
         "watch", help="on the Mac: keep the activity journal (what's in front, once a minute)"
     )
+    linkedin = commands.add_parser(
+        "linkedin", help="on the Mac: run the read-only LinkedIn gateway for the bot"
+    )
+    linkedin.add_argument(
+        "--login", action="store_true", help="sign in to LinkedIn once, in its own browser window"
+    )
     args = parser.parse_args(argv)
 
     if args.command in ("standby", "sync"):
@@ -78,6 +84,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         from mentor.activity import watch
 
         watch()
+        return
+
+    if args.command == "linkedin":
+        from mentor.linkedin import gateway
+
+        gateway.login() if args.login else gateway.serve()
         return
 
     if args.command == "google-auth":

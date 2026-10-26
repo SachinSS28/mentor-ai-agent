@@ -54,12 +54,22 @@ CLAIMED_ACTION = re.compile(
     r"recorded|blocked|noted)\b",
     re.IGNORECASE,
 )
+# Things no tool of Mentor's does (it never sends, connects, applies or messages for the owner),
+# so a reply saying it did one is wrong whatever else ran this turn.
+NEVER_DONE = re.compile(
+    r"\bI(?:'ve|’ve| have)(?: also| now| just)?\s+"
+    r"(?:sent|submitted|connected|applied|messaged|invited)\b"
+    r"|\b(?:connection request|invitation|application|message)s?\s+(?:has|have)\s+been\s+"
+    r"(?:sent|submitted)\b",
+    re.IGNORECASE,
+)
 HONESTY_CHECK = (
-    "Check of your last reply: it says you did something, but no tool that changes anything ran "
-    "in this turn, so nothing was done. Write the reply again without claiming any action: keep "
-    "the rest, and offer to do it instead."
+    "Check of your last reply: it says you did something that no tool did in this turn (and you "
+    "never send, connect, apply or message for the owner), so it wasn't done. Write the reply "
+    "again without claiming it: keep the rest, and offer to do or prepare it instead."
 )
 NOTHING_CHANGED = "(Nothing was changed yet: say the word and I'll do it.)"
+NOT_MINE_TO_DO = "(That part wasn't done: I never send, connect, apply or message for you.)"
 
 # Small models answer "can you see my screen?" from what they believe about themselves ("No"),
 # or describe activity they never looked up. Such questions, and replies that talk about the
@@ -149,6 +159,8 @@ def activity_lookup(messages: Sequence[BaseMessage], reply: BaseMessage | None) 
 
 
 def claims_unbacked_action(reply: BaseMessage, messages: Sequence[BaseMessage]) -> bool:
+    if NEVER_DONE.search(reply.text):
+        return True
     return bool(CLAIMED_ACTION.search(reply.text)) and not changed_this_turn(messages)
 
 
@@ -178,18 +190,21 @@ def build_graph(
         if final and reads_activity and (lookup := activity_lookup(messages, reply)):
             return {"messages": [lookup]}  # the made-up description is dropped
         if final and claims_unbacked_action(reply, messages):
-            reply = honest(prompt, reply)
+            reply = honest(prompt, reply, messages)
         return {"messages": [reply]}
 
-    def honest(prompt: list[BaseMessage], reply: AIMessage) -> AIMessage:
+    def honest(
+        prompt: list[BaseMessage], reply: AIMessage, messages: Sequence[BaseMessage]
+    ) -> AIMessage:
         """Small models sometimes report an action they never took ("I've added a reminder").
         Ask once for the reply without the claim (the check isn't stored), and say plainly that
-        nothing changed if the claim survives."""
+        it wasn't done if the claim survives."""
         check = [*prompt, AIMessage(reply.text), HumanMessage(HONESTY_CHECK)]
         fixed = model.invoke(check).text.strip()
-        if fixed and not CLAIMED_ACTION.search(fixed):
+        if fixed and not claims_unbacked_action(AIMessage(fixed), messages):
             return AIMessage(fixed)
-        return AIMessage(f"{reply.text.strip()}\n\n{NOTHING_CHANGED}")
+        note = NOT_MINE_TO_DO if NEVER_DONE.search(reply.text) else NOTHING_CHANGED
+        return AIMessage(f"{reply.text.strip()}\n\n{note}")
 
     graph = StateGraph(MessagesState)
     graph.add_node("agent", agent)

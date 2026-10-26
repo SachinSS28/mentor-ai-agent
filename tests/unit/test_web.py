@@ -95,7 +95,9 @@ def test_a_page_that_cannot_be_read_says_why() -> None:
 def test_linkedin_pages_are_never_read(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(web, "read", lambda url, question: pytest.fail("LinkedIn was read"))
     for url in ("https://www.linkedin.com/in/someone", "https://hk.linkedin.com/company/x"):
-        assert read_webpage.invoke({"url": url}).startswith("LinkedIn pages can't be read")
+        assert read_webpage.invoke({"url": url}).startswith(
+            "LinkedIn pages are read with linkedin_read"
+        )
     assert not web.is_blocked("https://notlinkedin.com/page")
 
 

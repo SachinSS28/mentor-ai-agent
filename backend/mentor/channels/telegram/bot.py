@@ -18,17 +18,18 @@ from sqlalchemy.exc import SQLAlchemyError
 from telegram import Message, Update
 from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, NetworkError
-from telegram.ext import Application, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from mentor import checkin, morning, reading, review
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
-from mentor.charter import owner_timezone
+from mentor.charter import get_charter, owner_timezone
 from mentor.db.heartbeat import beat
 from mentor.db.models import Task
 from mentor.db.session import get_engine
 from mentor.db.state import get_state, set_state
+from mentor.linkedin import guard as linkedin
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 from mentor.mcp_servers.mentor_core import tasks
 from mentor.practice import dhamma
@@ -84,6 +85,30 @@ async def send_reply(message: Message, reply: str) -> None:
         except BadRequest as error:
             log.warning("Telegram refused the formatting (%s); sending plain text", error)
             await message.reply_text(part)
+
+
+def linkedin_command(action: str, now: datetime) -> str:
+    """/linkedin [status|on|off], answered without the model."""
+    config = get_charter().linkedin
+    if action == "on":
+        linkedin.switch_on()
+        return "LinkedIn look-ups are on again.\n\n" + linkedin.status(now, config)
+    if action == "off":
+        linkedin.switch_off(now)
+        return "LinkedIn look-ups are off until you send /linkedin on."
+    return linkedin.status(now, config)
+
+
+def make_linkedin_command(allowed_chat_id: int) -> CommandHandler[ContextTypes.DEFAULT_TYPE, None]:
+    async def on_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        message = update.effective_message
+        if message is None:
+            return
+        action = (context.args or ["status"])[0].lower()
+        now = datetime.now(owner_timezone())
+        await message.reply_text(await asyncio.to_thread(linkedin_command, action, now))
+
+    return CommandHandler("linkedin", on_command, filters=filters.Chat(chat_id=allowed_chat_id))
 
 
 def make_handler(
@@ -311,7 +336,12 @@ def make_job_desk(
             await asyncio.to_thread(library.tick, now)
         except Exception:
             log.exception("The library sync failed; trying again later")
-        for text in (digest, evening, weekly):
+        try:
+            paused = await asyncio.to_thread(linkedin.notice, now)
+        except Exception:
+            log.exception("Couldn't check LinkedIn's state")
+            paused = None
+        for text in (digest, evening, weekly, paused):
             if text:
                 await tell_owner(graph, context.bot, chat_id, text)
 
@@ -425,6 +455,8 @@ def run_telegram_bot() -> None:
         token = settings.telegram_bot_token.get_secret_value()
         builder = Application.builder().token(token).post_init(announce).post_stop(stop_beating)
         app = builder.build()
+        if settings.telegram_allowed_chat_id is not None:  # first: commands don't reach the model
+            app.add_handler(make_linkedin_command(settings.telegram_allowed_chat_id))
         app.add_handler(make_handler(graph, settings.telegram_allowed_chat_id))
         app.add_handler(make_media_handler(graph, settings.telegram_allowed_chat_id))
         app.add_error_handler(make_error_handler(settings.telegram_allowed_chat_id))

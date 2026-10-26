@@ -1,6 +1,7 @@
 """People to meet: weekly suggestions and connection follow-ups for the morning message.
 
-Mentor never touches LinkedIn: it gives a LinkedIn search link and the owner connects.
+Mentor never connects or messages on LinkedIn: it gives the person's LinkedIn profile (or a
+search link) and drafts a note, and the owner connects.
 """
 
 from collections.abc import Mapping, Sequence
@@ -24,6 +25,13 @@ def linkedin_search(person: Person) -> str:
     return f"https://www.linkedin.com/search/results/people/?keywords={quote_plus(words)}"
 
 
+def linkedin_link(person: Person) -> str:
+    """Their LinkedIn profile when they were found there, else a people search to open."""
+    if person.source == "linkedin" and person.profile_url:
+        return f"[LinkedIn profile]({person.profile_url})"
+    return f"[LinkedIn search]({linkedin_search(person)})"
+
+
 def format_person(person: Person) -> str:
     where = f" — {person.organization}" if person.organization else ""
     return f"**P{person.ref}** {person.name}{where}"
@@ -33,8 +41,8 @@ def person_block(person: Person) -> str:
     lines = [f"• {format_person(person)}"]
     if person.about:
         lines.append(f"  {person.about}")
-    links = [f"[LinkedIn search]({linkedin_search(person)})"]
-    if person.profile_url:
+    links = [linkedin_link(person)]
+    if person.profile_url and person.source == "openalex":
         links.append(f"[publications]({person.profile_url})")
     lines.append("  " + " · ".join(links))
     return "\n".join(lines)

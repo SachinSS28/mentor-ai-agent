@@ -17,7 +17,8 @@ TAVILY = "https://api.tavily.com"
 PAGE_CHARS = 6000  # about 1,500 tokens of page text per read, to keep the model's context free
 SNIPPET_CHARS = 500  # per search result; read_webpage gets the rest
 TimeRange = Literal["day", "week", "month", "year"]
-# Mentor never reads LinkedIn pages: its terms forbid automated access to the site.
+# Web search never reads LinkedIn pages: those go only through the LinkedIn gateway, which keeps
+# to the owner's own session, read-only and paced (mentor/linkedin/).
 BLOCKED_HOSTS = ("linkedin.com",)
 
 

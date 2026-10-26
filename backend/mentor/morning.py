@@ -13,6 +13,7 @@ from mentor.briefing import highlights
 from mentor.charter import get_charter
 from mentor.db.state import get_state, set_state
 from mentor.jobs import desk
+from mentor.linkedin import desk as linkedin
 from mentor.network import desk as network
 from mentor.practice import dhamma
 
@@ -22,6 +23,10 @@ log = logging.getLogger(__name__)
 def tick(now: datetime) -> str | None:
     # Jobs first: a Google sign-in problem there is reported to the owner by the bot.
     desk.check_alerts()
+    try:
+        linkedin.morning_search(now)  # at 07:30: fresh LinkedIn jobs for the shortlist
+    except Exception:
+        log.exception("The morning LinkedIn search failed; the Job Desk carries on")
     desk.score_new()
     try:
         briefing.collect(now)

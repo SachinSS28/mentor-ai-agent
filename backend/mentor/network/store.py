@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from mentor.db.models import CONTACT_STATUSES, Person
 from mentor.db.session import get_sessionmaker
+from mentor.linkedin.results import LinkedInPerson
 from mentor.network.experts import Candidate, about
 
 # Statuses the owner sets; "suggested" is Mentor's own.
@@ -50,6 +51,47 @@ def save_suggestions(candidates: Sequence[Candidate], since: date, now: datetime
             people.append(session.scalars(stmt.returning(Person)).one())
         session.commit()
     return people
+
+
+def save_linkedin(found: Sequence[LinkedInPerson], now: datetime) -> list[Person]:
+    """Stores people from a LinkedIn search as suggested contacts, keyed by their LinkedIn
+    username. Someone already known keeps their P-number, status and notes; their headline is
+    refreshed. Returns them in order."""
+    usernames = [person.username for person in found]
+    query = select(Person).where(Person.source == "linkedin", Person.external_id.in_(usernames))
+    people = []
+    with get_sessionmaker()() as session:
+        known = {person.external_id: person for person in session.scalars(query)}
+        for person in found:
+            if contact := known.get(person.username):
+                contact.about, contact.profile_url = person.about, person.url
+            else:
+                contact = Person(
+                    source="linkedin",
+                    external_id=person.username,
+                    name=person.name,
+                    organization=person.organization,
+                    profile_url=person.url,
+                    about=person.about,
+                    outreach="suggested",
+                    suggested_at=now,
+                )
+                session.add(contact)
+                known[person.username] = contact
+            people.append(contact)
+        session.commit()
+        for contact in people:
+            session.refresh(contact)
+    return list(dict.fromkeys(people))
+
+
+def linkedin_username(ref: int) -> tuple[Person, str | None] | None:
+    """The contact with this P-number and their LinkedIn username (None if not from LinkedIn)."""
+    with get_sessionmaker()() as session:
+        person = session.scalars(select(Person).where(Person.ref == ref)).first()
+    if person is None:
+        return None
+    return person, person.external_id if person.source == "linkedin" else None
 
 
 def parse_ref(text: str) -> int | None:

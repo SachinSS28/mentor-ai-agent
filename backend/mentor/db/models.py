@@ -155,12 +155,13 @@ CONTACT_STATUSES = (
 
 class Person(Base):
     """Someone in the owner's world. Networking contacts carry an `outreach` status; `ref` is the
-    short P-number shown to the owner ("invited P12"). Mentor's suggestions come from OpenAlex."""
+    short P-number shown to the owner ("invited P12"). Mentor's suggestions come from OpenAlex
+    publication records or LinkedIn searches (external_id: the LinkedIn username)."""
 
     __tablename__ = "people"
     __table_args__ = (
         UniqueConstraint("source", "external_id", name="uq_people_source_external_id"),
-        one_of("source", ("owner", "openalex")),
+        one_of("source", ("owner", "openalex", "linkedin")),
         one_of("outreach", CONTACT_STATUSES),
     )
 
@@ -375,7 +376,7 @@ JOB_STATUSES = (
 
 
 class Job(Base):
-    """A job found in a job-alert email (LinkedIn so far). `ref` is the short J-number shown to
+    """A job found in a job-alert email or a LinkedIn search. `ref` is the short J-number shown to
     the owner ("save J12"); `fit_score` is 0-100 against the owner's profile."""
 
     __tablename__ = "jobs"
@@ -396,7 +397,7 @@ class Job(Base):
     url: Mapped[str] = mapped_column(Text)
     insights: Mapped[list[Any]] = mapped_column(server_default="[]")  # e.g. "1 school alum"
     alert: Mapped[str | None] = mapped_column(Text)  # the saved search that found it
-    email_id: Mapped[str] = mapped_column(Text)
+    email_id: Mapped[str | None] = mapped_column(Text)  # None: found by a LinkedIn search
     found_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     fit_score: Mapped[int | None] = mapped_column(SmallInteger)
     fit_reason: Mapped[str | None] = mapped_column(Text)

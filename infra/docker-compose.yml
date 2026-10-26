@@ -54,8 +54,11 @@ services:
       MENTOR_OLLAMA_URL: http://host.docker.internal:11434
       MENTOR_GOOGLE_TOKEN_PATH: /secrets/google_token.json
       MENTOR_GOOGLE_CLIENT_SECRET_PATH: /secrets/google_client_secret.json
+      # The read-only LinkedIn gateway on the Mac (`mentor linkedin`), and the token it made.
+      MENTOR_LINKEDIN_GATEWAY_URL: http://host.docker.internal:8765/mcp
+      MENTOR_LINKEDIN_TOKEN_PATH: /secrets/linkedin_gateway_token
     volumes:
-      - ${HOME}/.config/mentor:/secrets # the Google sign-in, owner-only on the Mac
+      - ${HOME}/.config/mentor:/secrets # the Google sign-in and LinkedIn token, owner-only on the Mac
     depends_on:
       migrate: { condition: service_completed_successfully }
     logging: *logging

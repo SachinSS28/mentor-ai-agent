@@ -48,6 +48,45 @@ def save_postings(postings: Sequence[Posting], email_id: str, found_at: datetime
     return new
 
 
+def save_searched(postings: Sequence[Posting], found_at: datetime) -> tuple[list[Job], int]:
+    """Store jobs from a LinkedIn search. A job already on the desk (from an alert or an earlier
+    search) keeps its J-number and status. Returns the jobs in search order, and how many were
+    new."""
+    if not postings:
+        return [], 0
+    ids = [posting.external_id for posting in postings]
+    on_desk = select(Job.external_id).where(Job.source == "linkedin", Job.external_id.in_(ids))
+    with get_sessionmaker()() as session:
+        # Known jobs aren't offered to the insert at all: each attempt would use up a J-number.
+        known = set(session.scalars(on_desk))
+        new = 0
+        for posting in postings:
+            if posting.external_id in known:
+                continue
+            known.add(posting.external_id)
+            inserted = session.execute(
+                insert(Job)
+                .values(
+                    source="linkedin",
+                    external_id=posting.external_id,
+                    title=posting.title,
+                    company=posting.company,
+                    location=posting.location,
+                    url=posting.url,
+                    insights=list(posting.insights),
+                    alert=posting.alert,
+                    found_at=found_at,
+                )
+                .on_conflict_do_nothing(constraint="uq_jobs_source_external_id")
+                .returning(Job.id)
+            ).first()
+            new += inserted is not None
+        session.commit()
+        query = select(Job).where(Job.source == "linkedin", Job.external_id.in_(ids))
+        found = {job.external_id: job for job in session.scalars(query)}
+    return [found[i] for i in dict.fromkeys(ids) if i in found], new
+
+
 def unscored(limit: int) -> list[Job]:
     query = select(Job).where(Job.fit_score.is_(None)).order_by(Job.found_at.desc()).limit(limit)
     with get_sessionmaker()() as session:

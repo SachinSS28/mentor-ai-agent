@@ -229,3 +229,15 @@ def test_describing_the_journal_is_not_a_claim(system_prompt: Any) -> None:
     graph = build_graph(scripted(reply), [my_activity], system_prompt, InMemorySaver())
     assert ask(graph, "What tools do you have?", "t1") == reply
     assert tool_results(graph) == []
+
+
+def test_sending_connecting_or_applying_is_never_claimed(system_prompt: Any) -> None:
+    # No tool sends, connects or applies, so even after a real change the claim is rewritten.
+    model = scripted(
+        call("add_task", title="Follow up with P21"),
+        "I've added T1 and I've sent the connection request to P21.",
+        "I've added T1. Here's a note for you to send P21 when you connect: …",
+    )
+    graph = build_graph(model, [add_task], system_prompt)
+    reply = ask(graph, "Connect with P21 and remind me to follow up", "t1")
+    assert reply == "I've added T1. Here's a note for you to send P21 when you connect: …"
