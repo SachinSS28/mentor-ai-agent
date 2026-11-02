@@ -29,8 +29,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-# Matches the embedding models shortlisted for G1 (Cohere Embed Multilingual v3, Titan v2).
-EMBEDDING_DIMENSIONS = 1024
+# Embedding dimensions: 768 for EmbeddingGemma on the Mac.
+EMBEDDING_DIMENSIONS = 768
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",

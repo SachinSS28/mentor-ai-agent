@@ -16,6 +16,7 @@ from mentor.db.models import LibraryChunk
 from mentor.db.session import get_sessionmaker
 from mentor.db.state import get_state, set_state
 from mentor.mcp_servers.google_tools import drive
+from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 
 log = logging.getLogger(__name__)
 
@@ -105,8 +106,19 @@ def forget(source: str, keep: Sequence[str]) -> None:
 def sync_drive() -> int:
     """Indexes new and changed documents in the Drive folder and drops deleted ones. Returns
     how many documents were (re)indexed."""
-    service = drive.drive_service()
-    files = drive.list_files(service, get_charter().documents.drive_folder)
+    try:
+        service = drive.drive_service()
+        files = drive.list_files(service, get_charter().documents.drive_folder)
+    except LookupError as error:
+        log.info("Drive library sync skipped: %s", error)
+        return 0
+    except GoogleNotConnectedError as error:
+        log.warning("Drive library sync skipped (Google not connected): %s", error)
+        return 0
+    except Exception as error:
+        log.warning("Drive library sync failed: %s", error)
+        return 0
+
     known = versions("drive")
     done = 0
     for f in files:

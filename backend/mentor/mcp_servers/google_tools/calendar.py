@@ -24,6 +24,8 @@ class Event:
     end: datetime | date
     location: str | None
     attendees: int
+    id: str = ""
+    description: str | None = None
 
 
 def parse_event(item: dict[str, Any], tz: ZoneInfo) -> Event:
@@ -38,6 +40,8 @@ def parse_event(item: dict[str, Any], tz: ZoneInfo) -> Event:
         end=when(item["end"]),
         location=item.get("location"),
         attendees=len(item.get("attendees", [])),
+        id=str(item.get("id") or ""),
+        description=item.get("description"),
     )
 
 

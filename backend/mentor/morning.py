@@ -16,6 +16,7 @@ from mentor.jobs import desk
 from mentor.linkedin import desk as linkedin
 from mentor.network import desk as network
 from mentor.practice import dhamma
+from mentor import weather
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +43,10 @@ def tick(now: datetime) -> str | None:
         parts.append(dhamma.morning_section(now))  # first: an intention for the day
     except Exception:
         log.exception("Dhamma section failed; sending the rest")
+    try:
+        parts.append(weather.morning_weather_section())  # weather and severe warnings
+    except Exception:
+        log.exception("Weather section failed; sending the rest")
     parts.append(desk.shortlist(now))
     try:
         parts.append(briefing.section(now))

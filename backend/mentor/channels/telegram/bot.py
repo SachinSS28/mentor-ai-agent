@@ -20,7 +20,7 @@ from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, NetworkError
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from mentor import checkin, morning, reading, review
+from mentor import checkin, meetings, morning, reading, review
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
@@ -47,7 +47,14 @@ JOB_DESK_EVERY = 15 * 60
 REMINDERS_EVERY = 60  # timed reminders go out within a minute
 TELEGRAM_DOWNLOAD_LIMIT = 20_000_000  # the most a bot may download
 SHARED_CHARS = 8000  # about 2,000 tokens of a shared file go into the conversation
-MEDIA = filters.PHOTO | filters.Document.PDF | filters.Document.IMAGE | filters.Document.DOCX
+MEDIA = (
+    filters.PHOTO
+    | filters.Document.PDF
+    | filters.Document.IMAGE
+    | filters.Document.DOCX
+    | filters.VOICE
+    | filters.AUDIO
+)
 GOOGLE_EXPIRED_TOLD_ON = "google.expired_told_on"
 
 Decision = Literal["answer", "pair", "ignore"]
@@ -131,11 +138,21 @@ def make_handler(
 
 
 async def read_attachment(message: Message) -> tuple[str, str, str]:
-    """(name, kind, text) for a photo, image file, PDF or Word file the owner sent."""
-    if message.photo:
+    """(name, kind, text) for a photo, image file, PDF, Word file or voice note the owner sent."""
+    if getattr(message, "photo", None):
         item: Any = message.photo[-1]  # the largest size
         name, kind, mime = "photo", "photo", "image/jpeg"
-    elif message.document:
+    elif getattr(message, "voice", None):
+        item = message.voice
+        name, kind, mime = "voice note", "voice note", item.mime_type or "audio/ogg"
+    elif getattr(message, "audio", None):
+        item = message.audio
+        name, kind, mime = (
+            item.file_name or "audio file",
+            "audio recording",
+            item.mime_type or "audio/mpeg",
+        )
+    elif getattr(message, "document", None):
         item = message.document
         mime = item.mime_type or ""
         name = item.file_name or "file"
@@ -152,6 +169,8 @@ async def read_attachment(message: Message) -> tuple[str, str, str]:
         text = await asyncio.to_thread(reading.read_pdf, data)
     elif kind == "Word file":
         text = reading.docx_text(data)
+    elif kind in ("voice note", "audio recording"):
+        text = await asyncio.to_thread(reading.transcribe_audio, data, mime)
     else:
         text = await asyncio.to_thread(reading.read_image, data, mime, kind)
     return name, kind, reading.tidy(text, SHARED_CHARS)
@@ -159,6 +178,9 @@ async def read_attachment(message: Message) -> tuple[str, str, str]:
 
 def shared_text(caption: str | None, name: str, kind: str, text: str) -> str:
     """What goes into the conversation: the owner's caption, then what was read, as data."""
+    if kind in ("voice note", "audio recording"):
+        extra = f" (caption: {caption})" if caption else ""
+        return f"(Voice message from owner{extra}):\n{text}"
     request = (caption or "").strip() or f"I'm sharing this {kind} with you."
     return (
         f'{request}\n\n<untrusted source="{kind}" name="{name}">\n{text}\n</untrusted>\n'
@@ -415,6 +437,22 @@ def make_research(
     return run
 
 
+def make_meetings(
+    graph: MentorGraph, chat_id: int
+) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
+    async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
+        now = datetime.now(owner_timezone())
+        try:
+            briefs = await asyncio.to_thread(meetings.tick, now)
+        except Exception:
+            log.exception("The meetings check failed; trying again in 3 minutes")
+            return
+        for brief in briefs:
+            await tell_owner(graph, context.bot, chat_id, brief)
+
+    return run
+
+
 def make_reminders(
     graph: MentorGraph, chat_id: int
 ) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
@@ -484,5 +522,11 @@ def run_telegram_bot() -> None:
                 interval=REMINDERS_EVERY,
                 first=40,
                 name="checkins",
+            )
+            app.job_queue.run_repeating(
+                make_meetings(graph, settings.telegram_allowed_chat_id),
+                interval=180,
+                first=50,
+                name="meetings",
             )
         app.run_polling(allowed_updates=Update.ALL_TYPES)

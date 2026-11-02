@@ -45,6 +45,7 @@ CHANGING_TOOLS = frozenset(
         "forget_memory",
         "update_job",
         "track_contact",
+        "open_in_safari",
     }
 )
 # "I've added", "I have saved", "has been scheduled" ...: an action reported as done.

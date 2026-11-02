@@ -28,6 +28,7 @@ READ_TOOLS = frozenset(
         "get_company_profile",
         "get_company_posts",
         "search_posts",
+        "open_in_safari",
     }
 )
 RECENT = "linkedin.recent"  # look-up times in the last day, as a JSON list
@@ -84,6 +85,8 @@ def check(tool: str, now: datetime, config: LinkedInConfig) -> float:
     """Seconds to wait before this look-up, or Blocked with the reason."""
     if tool not in READ_TOOLS:
         raise Blocked(f"{tool} isn't allowed: Mentor only reads LinkedIn.")
+    if tool == "open_in_safari":
+        return 0.0
     if not config.enabled:
         raise Blocked("LinkedIn is switched off in the charter.")
     if reason := stopped(now):

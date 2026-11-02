@@ -157,6 +157,25 @@ def build(gateway: Gateway) -> FastMCP:
         args = {"keywords": keywords, "date_posted": date_posted, "max_pages": 1}
         return await gateway.relay("search_posts", args)
 
+    @mcp.tool
+    async def open_in_safari(url: str) -> dict[str, Any]:
+        """Open a URL (e.g. LinkedIn job, profile, or post) in Apple Safari on the Mac."""
+        try:
+            if not (url.startswith("http://") or url.startswith("https://")):
+                return {"result": f"Invalid URL scheme: {url}"}
+            proc = await asyncio.to_thread(
+                subprocess.run,
+                ["/usr/bin/open", "-a", "Safari", url],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if proc.returncode == 0:
+                return {"result": f"Opened {url} in Safari on your Mac."}
+            return {"result": f"Failed to open Safari: {proc.stderr}"}
+        except Exception as error:
+            return {"result": f"Couldn't open Safari: {error}"}
+
     return mcp
 
 
@@ -205,10 +224,11 @@ def serve() -> None:
 
 
 def login() -> None:
-    """The one-time sign-in: LinkedIn opens in the server's own browser window, and the owner
-    types their password and code there."""
+    """The sign-in: opens LinkedIn in Safari and the server's own browser window."""
+    print("Opening LinkedIn in Safari...", flush=True)
+    subprocess.run(["/usr/bin/open", "-a", "Safari", "https://www.linkedin.com/login"], check=False)
     print(
-        "A LinkedIn window opens: sign in there (your password never passes through Mentor).",
+        "A dedicated sign-in window also opens for Mentor's read session (passwords never pass through Mentor).",
         flush=True,
     )
     subprocess.run(  # noqa: S603 (the pinned server, fixed arguments)

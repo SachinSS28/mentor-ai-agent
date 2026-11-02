@@ -72,6 +72,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     linkedin.add_argument(
         "--login", action="store_true", help="sign in to LinkedIn once, in its own browser window"
     )
+    linkedin.add_argument("--safari", action="store_true", help="open LinkedIn in Safari browser")
     args = parser.parse_args(argv)
 
     if args.command in ("standby", "sync"):
@@ -89,7 +90,16 @@ def main(argv: Sequence[str] | None = None) -> None:
     if args.command == "linkedin":
         from mentor.linkedin import gateway
 
-        gateway.login() if args.login else gateway.serve()
+        if args.login:
+            gateway.login()
+        elif args.safari:
+            import subprocess
+
+            subprocess.run(
+                ["/usr/bin/open", "-a", "Safari", "https://www.linkedin.com/feed/"], check=False
+            )
+        else:
+            gateway.serve()
         return
 
     if args.command == "google-auth":

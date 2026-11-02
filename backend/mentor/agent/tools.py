@@ -578,6 +578,58 @@ def linkedin_read(item: str) -> str:
 
 
 @tool
+def open_in_safari(item: str) -> str:
+    """Open a LinkedIn job (J12), person profile (P12), or web link in Apple Safari on the owner's Mac.
+
+    Use this whenever the owner asks to open a job, profile, or link in Safari or on their screen.
+    """
+    item = item.strip()
+    link = item
+    if item[:1] in "Jj" and item[1:].isdigit():
+        job = store.by_ref(int(item[1:]))
+        if job is None:
+            return f"There's no job {item.upper()} on the Job Desk."
+        link = job.url
+    elif item[:1] in "Pp" and item[1:].isdigit():
+        known = contacts.linkedin_username(int(item[1:]))
+        if known is None:
+            return f"There's no contact {item.upper()}."
+        person, username = known
+        link = person.profile_url or (f"https://www.linkedin.com/in/{username}" if username else "")
+        if not link:
+            return f"P{person.ref} {person.name} has no link to open."
+    elif not (link.startswith("http://") or link.startswith("https://")):
+        link = f"https://www.linkedin.com/search/results/all/?keywords={item}"
+
+    try:
+        data = linkedin("open_in_safari", url=link)
+        return str(data.get("result", f"Opened {link} in Safari on your Mac."))
+    except LinkedInUnavailable as error:
+        return f"Couldn't open in Safari: {error}. You can open it manually: {link}"
+
+
+@tool
+def check_weather(city: str = "Hong Kong") -> str:
+    """Check current weather conditions and active severe weather warnings.
+
+    For Hong Kong, checks the Hong Kong Observatory (HKO) directly for typhoon and rainstorm signals.
+    """
+    cleaned = city.strip().lower()
+    if cleaned in ("hong kong", "hk", "hongkong", ""):
+        from mentor import weather
+
+        summary = weather.morning_weather_section()
+        warnings = weather.active_warnings()
+        warn_text = (
+            f"\nActive alerts: {', '.join(warnings)}"
+            if warnings
+            else "\nNo active severe weather warnings."
+        )
+        return f"{summary or 'Hong Kong Observatory:'}{warn_text}"
+    return web.search(f"current weather in {city}", max_results=2)
+
+
+@tool
 def search_web(query: str, recent: str = "", news: bool = False, max_results: int = 5) -> str:
     """Search the web for current information that isn't in the owner's own data: companies and
     organizations, events and conferences, public pages about people, news, prices, facts.
@@ -807,6 +859,8 @@ TOOLS: list[BaseTool] = [
     linkedin_people,
     linkedin_posts,
     linkedin_read,
+    open_in_safari,
+    check_weather,
     search_web,
     read_webpage,
     list_documents,

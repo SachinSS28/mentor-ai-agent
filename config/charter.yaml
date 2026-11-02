@@ -14,14 +14,14 @@ owner:
   currency: HKD
 
 working_hours:
-  days: []                     # e.g. [mon, tue, wed, thu, fri, sat]
-  start: null                  # e.g. "10:00"
-  end: null                    # e.g. "19:00"
-  deep_work: null              # your best focus window, e.g. "09:30-12:00"
+  days: [mon, tue, wed, thu, fri]
+  start: "09:00"
+  end: "18:30"
+  deep_work: "09:30-12:00"
 
 daily_rhythm:                  # 24-hour times, Hong Kong time
   morning_checkin: "06:30"
-  morning_brief: "07:00"
+  morning_brief: "08:00"
   midday_check: "13:00"
   shutdown: "18:30"
   evening_review: "21:30"
@@ -29,28 +29,46 @@ daily_rhythm:                  # 24-hour times, Hong Kong time
   quiet_hours: { start: "22:30", end: "06:30" }
 
 # One workspace per business or client group; Mentor never mixes their details.
-workspaces: []
-#  - id: example
-#    name: Example Business
-#    about: One line on what it does
+workspaces:
+  - id: research
+    name: Water & Environmental Engineering Research
+    about: Journal manuscripts, NIH Roorkee collaboration, EPANET & ML frameworks
+  - id: career
+    name: Career & Consulting Opportunities
+    about: Hong Kong water sector advisory, academic appointments, executive applications
+  - id: teaching
+    name: Academic Teaching & Curriculum
+    about: DY Patil & Wollongong College HK teaching and materials
 
 # Goals for Oct-Dec 2026. Each one gets a measurable target where possible.
-goals: []
-#  - title: Close new clients
-#    workspace: example
-#    target: "5 by 31 Dec"
+goals:
+  - title: Advance Q4 Hong Kong senior water engineering & academic applications
+    workspace: career
+    target: "Shortlist and track top 5 aligned opportunities by Dec 2026"
+  - title: Complete and submit revisions for coastal infrastructure & groundwater manuscripts
+    workspace: research
+    target: "2 papers published or under second review by year end"
+  - title: Maintain consistent daily deep work blocks (09:30-12:00)
+    workspace: research
+    target: "≥ 4 days per week"
 
-routines: []
-#  - name: exercise
-#    schedule: "mon-sat 06:45"
-#    target: "30 min"
+routines:
+  - name: morning_dhamma_and_focus
+    schedule: "mon-sun 06:45"
+    target: "30 min"
+  - name: deep_work_block
+    schedule: "mon-fri 09:30"
+    target: "2.5 hours"
+  - name: evening_reflection
+    schedule: "mon-sun 21:30"
+    target: "15 min"
 
 # Areas only, never exact addresses.
-places: []
-#  - label: home
-#    area: Central
-#    usual_mode: mtr              # car | mtr | bus | cab
-#    buffer_minutes: 15
+places:
+  - label: home
+    area: Hong Kong
+    usual_mode: mtr              # car | mtr | bus | cab
+    buffer_minutes: 15
 
 # Dhamma practice (Theravada): a teaching in the 08:00 message, an evening reflection, and
 # Uposatha reminders (the evening before and on the day). Teachings: config/dhamma.yaml.

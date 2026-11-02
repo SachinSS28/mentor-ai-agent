@@ -8,6 +8,7 @@ rendered as images and read like photos.
 import base64
 import html
 import io
+import logging
 import re
 import zipfile
 
@@ -17,6 +18,9 @@ from PIL import Image, UnidentifiedImageError
 from pypdf import PdfReader
 
 from mentor.agent.models import get_chat_model
+from mentor.settings import get_settings
+
+log = logging.getLogger(__name__)
 
 IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp")  # what the model reads as they are
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -101,3 +105,40 @@ def docx_text(data: bytes) -> str:
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         xml = archive.read("word/document.xml").decode("utf-8")
     return html.unescape(XML_TAG.sub("", WORD_PARAGRAPH.sub("\n", xml)))
+
+
+def transcribe_audio(data: bytes, mime: str = "audio/ogg") -> str:
+    """Transcribes an audio recording (voice note) into text."""
+    api_key = get_settings().gemini_api_key
+    if not api_key:
+        raise ValueError("Audio transcription requires MENTOR_GEMINI_API_KEY in .env.")
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            api_key=api_key,
+            temperature=0.0,
+        )
+        prompt = (
+            "Transcribe this speech accurately. "
+            "Output only the exact transcription in English/Hindi/Hinglish without conversational filler."
+        )
+        msg = HumanMessage(
+            content=[
+                {"type": "text", "text": prompt},
+                {
+                    "type": "media",
+                    "mime_type": mime or "audio/ogg",
+                    "data": base64.b64encode(data).decode(),
+                },
+            ]
+        )
+        response = llm.invoke([msg])
+        text = response.text.strip()
+        if not text:
+            raise ValueError("No speech was detected in this audio recording.")
+        return text
+    except Exception as error:
+        log.warning("Audio transcription error: %s", error)
+        raise ValueError(f"Couldn't transcribe voice note: {error}") from None
