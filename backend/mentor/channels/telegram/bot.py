@@ -333,6 +333,7 @@ def make_job_desk(
 ) -> Callable[[ContextTypes.DEFAULT_TYPE], Coroutine[Any, Any, None]]:
     async def run(context: ContextTypes.DEFAULT_TYPE) -> None:
         now = datetime.now(owner_timezone())
+        digest = None
         try:
             digest = await asyncio.to_thread(morning.tick, now)
         except GoogleNotConnectedError as error:
@@ -340,10 +341,10 @@ def make_job_desk(
             if get_state(GOOGLE_EXPIRED_TOLD_ON) != now.date().isoformat():
                 set_state(GOOGLE_EXPIRED_TOLD_ON, now.date().isoformat())
                 await send_to_owner(context.bot, chat_id, f"The Job Desk can't read Gmail: {error}")
-            return
         except Exception:
             log.exception("The morning routine failed; trying again in 15 minutes")
-            return
+        # The rest runs whatever happened above: a Gmail outage mustn't cost the evening
+        # reflection, the weekly review or the library sync.
         try:
             evening = await asyncio.to_thread(dhamma.evening_tick, now)
         except Exception:

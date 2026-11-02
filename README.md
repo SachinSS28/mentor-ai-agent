@@ -64,7 +64,7 @@ uv run mentor telegram        # the bot outside OrbStack; needs MENTOR_TELEGRAM_
 
 **Check-ins:** every 2 hours from 10:00 to 20:00 Mentor sends a short check-in: today's priorities, how the work is going, or a step toward one of your goals, ending with a question you can simply answer. It stays quiet while you're already chatting. Times are under `checkins` in `config/charter.yaml`.
 
-**Weekly review:** every Sunday at 19:00 Mentor sends the week's facts (tasks done and overdue, applications, networking, research) and a short coach's note with the top three for next week, measured against the goals in `config/profile.md`.
+**Weekly review:** every Sunday at 19:00 (or, if the Mac slept through it, the first time it's awake within two days) Mentor sends the week's facts (tasks done and overdue, applications, networking, research) and a short coach's note with the top three for next week, measured against the goals in `config/profile.md`.
 
 Mentor keeps lasting facts you tell it (your CV, preferences, people, goals) in long-term memory, looks them up when needed, and forgets them when you ask. A conversation itself only reaches back about 6,000 tokens.
 
@@ -79,6 +79,8 @@ infra/gcp/deploy.sh google-token  # copy the Google sign-in; repeat after each `
 infra/gcp/deploy.sh             # build on the Mac, upload, (re)start; run after every code change
 infra/gcp/deploy.sh logs        # follow the bot's log
 ```
+
+**Staying awake:** Mentor runs only while the Mac is awake. `infra/launchd/mentor-service.sh awake` installs a login service (`caffeinate -s`) that keeps the Mac from sleeping while it's on power; the screen still sleeps, and on battery the Mac sleeps as usual. Closing the lid still puts it to sleep. Remove it with `infra/launchd/mentor-service.sh awake uninstall`.
 
 **Standby (retired 19 Oct, while the Mac is Mentor's only home):** when the server ran, the Mac could take over if it went down (plan D21). The standby checks the server's bot every minute; if it goes silent (about 4 minutes without a heartbeat) or the server stops, the Mac starts the same Telegram bot on the local model and says so in the chat. When the server is back, it copies the conversation over, hands back and says so. Conversations and memories sync every 5 minutes, so both know the same things. The Mac must be awake and online.
 

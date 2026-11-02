@@ -8,7 +8,7 @@ from sqlalchemy import select
 from mentor.charter import owner_timezone
 from mentor.db.models import Meeting, Task
 from mentor.db.session import get_sessionmaker
-from mentor.mcp_servers.google_tools import calendar, gmail
+from mentor.mcp_servers.google_tools import calendar
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 
 log = logging.getLogger(__name__)
@@ -32,18 +32,15 @@ def upcoming_meetings_to_brief(now: datetime) -> list[calendar.Event]:
 
     due: list[calendar.Event] = []
     for event in events:
-        if isinstance(event.start, datetime) and min_start <= event.start <= max_start:
-            # Check if already briefed
-            if not is_briefed(event.id or event.title):
-                due.append(event)
+        starts_soon = isinstance(event.start, datetime) and min_start <= event.start <= max_start
+        if starts_soon and not is_briefed(event.id or event.title):
+            due.append(event)
     return due
 
 
 def is_briefed(event_id: str) -> bool:
     with get_sessionmaker()() as session:
-        found = session.scalar(
-            select(Meeting).where(Meeting.calendar_event_id == event_id)
-        )
+        found = session.scalar(select(Meeting).where(Meeting.calendar_event_id == event_id))
         return found is not None and bool(found.brief)
 
 
@@ -51,9 +48,7 @@ def record_brief(event: calendar.Event, brief_text: str) -> None:
     event_id = event.id or event.title
     starts = event.start if isinstance(event.start, datetime) else datetime.now(owner_timezone())
     with get_sessionmaker()() as session, session.begin():
-        found = session.scalar(
-            select(Meeting).where(Meeting.calendar_event_id == event_id)
-        )
+        found = session.scalar(select(Meeting).where(Meeting.calendar_event_id == event_id))
         if found is None:
             found = Meeting(
                 calendar_event_id=event_id,
@@ -67,16 +62,11 @@ def record_brief(event: calendar.Event, brief_text: str) -> None:
 
 
 def format_brief(event: calendar.Event, now: datetime) -> str:
-    tz = owner_timezone()
     starts_str = (
-        event.start.strftime("%H:%M")
-        if isinstance(event.start, datetime)
-        else str(event.start)
+        event.start.strftime("%H:%M") if isinstance(event.start, datetime) else str(event.start)
     )
     minutes_left = (
-        int((event.start - now).total_seconds() / 60)
-        if isinstance(event.start, datetime)
-        else 30
+        int((event.start - now).total_seconds() / 60) if isinstance(event.start, datetime) else 30
     )
 
     lines: list[str] = [
@@ -90,11 +80,7 @@ def format_brief(event: calendar.Event, now: datetime) -> str:
 
     # Relevant tasks from the database
     with get_sessionmaker()() as session:
-        related_tasks = session.scalars(
-            select(Task)
-            .where(Task.status == "open")
-            .limit(3)
-        ).all()
+        related_tasks = session.scalars(select(Task).where(Task.status == "open").limit(3)).all()
         if related_tasks:
             lines.append("📋 **Active Tasks to keep in mind:**")
             for t in related_tasks:

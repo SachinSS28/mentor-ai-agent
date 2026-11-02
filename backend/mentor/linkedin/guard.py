@@ -15,6 +15,7 @@ import random
 from collections.abc import Callable, Mapping
 from datetime import datetime, time, timedelta
 from typing import Any
+from urllib.parse import urlparse
 
 from mentor.charter import LinkedInConfig
 from mentor.db.state import get_state, set_state
@@ -48,6 +49,18 @@ PUSHBACK: tuple[tuple[str, str, bool], ...] = (
     ("authentication", "LinkedIn needs you to sign in again", False),
     ("--login", "LinkedIn needs you to sign in again", False),
 )
+
+
+SAFARI_HOSTS = ("linkedin.com", "lnkd.in")
+
+
+def safari_allowed(url: str) -> bool:
+    """Only LinkedIn pages open in Safari: a link planted in an email or web page can't."""
+    parts = urlparse(url.strip())
+    host = (parts.hostname or "").lower()
+    return parts.scheme == "https" and any(
+        host == allowed or host.endswith(f".{allowed}") for allowed in SAFARI_HOSTS
+    )
 
 
 class Blocked(Exception):

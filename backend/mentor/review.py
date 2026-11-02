@@ -5,7 +5,7 @@ measured against the goals in the owner's profile."""
 import logging
 from collections import defaultdict
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -17,14 +17,15 @@ from mentor.charter import get_charter
 from mentor.db.models import Task
 from mentor.db.state import get_state, set_state
 from mentor.jobs import store as jobs
-from mentor.jobs.desk import digest_due
 from mentor.mcp_servers.mentor_core import tasks
 from mentor.network import store as contacts
 from mentor.practice.dhamma import uposatha
 
 log = logging.getLogger(__name__)
 
-REVIEW_SENT_ON = "review.sent_on"
+REVIEW_SENT_ON = "review.sent_on"  # the review day it was last sent for
+CATCH_UP = timedelta(days=2)  # a review missed while the Mac slept still comes, this much later
+WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 SHOWN = 5  # items listed per line
 
 COACH_PROMPT = """It is time for {owner}'s weekly review. The facts of the past week from your \
@@ -114,14 +115,22 @@ def message(now: datetime) -> str:
     return "\n".join(lines)
 
 
+def last_due(now: datetime, day: str, at: str) -> datetime:
+    """The latest review day and time at or before now, e.g. last Sunday 19:00."""
+    back = (now.weekday() - WEEKDAYS.index(day.lower())) % 7
+    due = datetime.combine(now.date() - timedelta(days=back), time.fromisoformat(at), now.tzinfo)
+    return due if due <= now else due - timedelta(days=7)
+
+
 def tick(now: datetime) -> str | None:
-    """The review once a week at the charter's review day and time (or the first check after it
-    that day), else None."""
+    """The review once a week at the charter's review day and time, or at the first check after
+    it within two days (the Mac may have been asleep), else None."""
     config = get_charter().review
-    if not config.enabled or now.strftime("%A").lower() != config.day.lower():
+    if not config.enabled:
         return None
-    if not digest_due(now, get_state(REVIEW_SENT_ON), config.time):
+    due = last_due(now, config.day, config.time)
+    if now - due > CATCH_UP or get_state(REVIEW_SENT_ON) == due.date().isoformat():
         return None
     text = message(now)
-    set_state(REVIEW_SENT_ON, now.date().isoformat())
+    set_state(REVIEW_SENT_ON, due.date().isoformat())
     return text

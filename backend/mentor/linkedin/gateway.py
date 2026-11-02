@@ -161,8 +161,8 @@ def build(gateway: Gateway) -> FastMCP:
     async def open_in_safari(url: str) -> dict[str, Any]:
         """Open a URL (e.g. LinkedIn job, profile, or post) in Apple Safari on the Mac."""
         try:
-            if not (url.startswith("http://") or url.startswith("https://")):
-                return {"result": f"Invalid URL scheme: {url}"}
+            if not guard.safari_allowed(url):
+                return {"result": f"Only LinkedIn pages open in Safari: {url}"}
             proc = await asyncio.to_thread(
                 subprocess.run,
                 ["/usr/bin/open", "-a", "Safari", url],
@@ -228,7 +228,8 @@ def login() -> None:
     print("Opening LinkedIn in Safari...", flush=True)
     subprocess.run(["/usr/bin/open", "-a", "Safari", "https://www.linkedin.com/login"], check=False)
     print(
-        "A dedicated sign-in window also opens for Mentor's read session (passwords never pass through Mentor).",
+        "A separate sign-in window also opens for Mentor's own LinkedIn session "
+        "(your password never passes through Mentor).",
         flush=True,
     )
     subprocess.run(  # noqa: S603 (the pinned server, fixed arguments)

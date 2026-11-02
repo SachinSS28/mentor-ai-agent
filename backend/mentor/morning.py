@@ -8,6 +8,7 @@ digest_time, or at the first tick after it (e.g. when the Mac wakes up later).
 import logging
 from datetime import datetime
 
+from mentor import weather
 from mentor.briefing import digest as briefing
 from mentor.briefing import highlights
 from mentor.charter import get_charter
@@ -16,7 +17,6 @@ from mentor.jobs import desk
 from mentor.linkedin import desk as linkedin
 from mentor.network import desk as network
 from mentor.practice import dhamma
-from mentor import weather
 
 log = logging.getLogger(__name__)
 

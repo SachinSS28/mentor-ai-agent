@@ -122,7 +122,8 @@ def transcribe_audio(data: bytes, mime: str = "audio/ogg") -> str:
         )
         prompt = (
             "Transcribe this speech accurately. "
-            "Output only the exact transcription in English/Hindi/Hinglish without conversational filler."
+            "Output only the exact transcription in English/Hindi/Hinglish, "
+            "without conversational filler."
         )
         msg = HumanMessage(
             content=[

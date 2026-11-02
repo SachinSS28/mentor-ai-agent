@@ -206,3 +206,27 @@ def test_documents_reach_the_model_marked_as_the_owners(monkeypatch: pytest.Monk
 
     monkeypatch.setattr(drive, "read", missing)
     assert read_document.invoke({"name": "CV"}).startswith("There's no Google Drive folder")
+
+
+def test_a_weekly_review_missed_while_the_mac_slept_comes_late(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mentor import review
+
+    saved: dict[str, str] = {}
+    monkeypatch.setattr(review, "get_state", saved.get)
+    monkeypatch.setattr(review, "set_state", saved.__setitem__)
+    monkeypatch.setattr(review, "message", lambda now: f"review {now:%a %H:%M}")
+    sunday = datetime(2026, 11, 1, 19, 0, tzinfo=HKT)
+    assert review.last_due(sunday + timedelta(days=1), "Sunday", "19:00") == sunday
+    assert review.last_due(sunday - timedelta(minutes=1), "Sunday", "19:00") == (
+        sunday - timedelta(days=7)
+    )
+    assert review.tick(sunday - timedelta(hours=1)) is None  # not yet; last week's is too old
+
+    monday = datetime(2026, 11, 2, 17, 30, tzinfo=HKT)
+    assert review.tick(monday) == "review Mon 17:30"  # the Mac slept through Sunday evening
+    assert saved[review.REVIEW_SENT_ON] == "2026-11-01"
+    assert review.tick(monday + timedelta(hours=1)) is None  # once a week
+    saved.clear()
+    assert review.tick(datetime(2026, 11, 4, 9, 0, tzinfo=HKT)) is None  # Wednesday: too late

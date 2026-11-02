@@ -6,15 +6,16 @@
 #   telegram  the Telegram bot itself; the standby starts and stops it, deploy.sh stops it
 #   watch     the activity journal: what's in front on the Mac, once a minute
 #   linkedin  the read-only LinkedIn gateway for the bot (sign in first: mentor linkedin --login)
+#   awake     keeps the Mac from sleeping while on power, so Mentor keeps running (screen sleeps)
 #
-# Usage:  infra/launchd/mentor-service.sh standby|telegram|watch|linkedin            install or update, then start
-#         infra/launchd/mentor-service.sh standby|telegram|watch|linkedin uninstall  stop and remove
+# Usage:  infra/launchd/mentor-service.sh standby|telegram|watch|linkedin|awake      install or update, then start
+#         infra/launchd/mentor-service.sh standby|telegram|watch|linkedin|awake uninstall  stop and remove
 set -euo pipefail
 
 NAME="${1:-}"
 case "$NAME" in
-  standby | telegram | watch | linkedin) ;;
-  *) echo "Usage: $0 standby|telegram|watch|linkedin [uninstall]" >&2; exit 1 ;;
+  standby | telegram | watch | linkedin | awake) ;;
+  *) echo "Usage: $0 standby|telegram|watch|linkedin|awake [uninstall]" >&2; exit 1 ;;
 esac
 LABEL="com.mentor.$NAME"
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

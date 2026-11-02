@@ -20,6 +20,7 @@ from mentor.charter import get_charter, owner_timezone
 from mentor.db.models import Job, Memory, Person, Task
 from mentor.db.session import get_sessionmaker
 from mentor.jobs import desk, store
+from mentor.linkedin import guard
 from mentor.linkedin import results as linkedin_results
 from mentor.linkedin.client import LinkedInUnavailable
 from mentor.linkedin.client import call as linkedin
@@ -579,9 +580,8 @@ def linkedin_read(item: str) -> str:
 
 @tool
 def open_in_safari(item: str) -> str:
-    """Open a LinkedIn job (J12), person profile (P12), or web link in Apple Safari on the owner's Mac.
-
-    Use this whenever the owner asks to open a job, profile, or link in Safari or on their screen.
+    """Open a LinkedIn job (J12), a contact's LinkedIn page (P12) or a LinkedIn link in Safari on
+    the owner's Mac, when the owner asks to open it there. Other links: give them to the owner.
     """
     item = item.strip()
     link = item
@@ -595,11 +595,11 @@ def open_in_safari(item: str) -> str:
         if known is None:
             return f"There's no contact {item.upper()}."
         person, username = known
-        link = person.profile_url or (f"https://www.linkedin.com/in/{username}" if username else "")
-        if not link:
-            return f"P{person.ref} {person.name} has no link to open."
-    elif not (link.startswith("http://") or link.startswith("https://")):
-        link = f"https://www.linkedin.com/search/results/all/?keywords={item}"
+        link = network.linkedin_link(person).split("(", 1)[1].rstrip(")")
+    elif not item.startswith(("http://", "https://")):
+        link = linkedin_results.search_link("all", item)
+    if not guard.safari_allowed(link):
+        return f"Only LinkedIn pages open in Safari from here; give the owner the link: {link}"
 
     try:
         data = linkedin("open_in_safari", url=link)
@@ -612,7 +612,8 @@ def open_in_safari(item: str) -> str:
 def check_weather(city: str = "Hong Kong") -> str:
     """Check current weather conditions and active severe weather warnings.
 
-    For Hong Kong, checks the Hong Kong Observatory (HKO) directly for typhoon and rainstorm signals.
+    For Hong Kong, asks the Hong Kong Observatory (HKO) directly, typhoon and rainstorm signals
+    included.
     """
     cleaned = city.strip().lower()
     if cleaned in ("hong kong", "hk", "hongkong", ""):
@@ -626,7 +627,12 @@ def check_weather(city: str = "Hong Kong") -> str:
             else "\nNo active severe weather warnings."
         )
         return f"{summary or 'Hong Kong Observatory:'}{warn_text}"
-    return web.search(f"current weather in {city}", max_results=2)
+    try:
+        return web.format_results(web.search(f"current weather in {city}", max_results=2))
+    except (web.WebNotConnectedError, web.WebLimitError) as error:
+        return str(error)
+    except httpx.HTTPError:
+        return "Weather search isn't answering right now; try again in a minute."
 
 
 @tool

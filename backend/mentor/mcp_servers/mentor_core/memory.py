@@ -105,11 +105,7 @@ def recall(query: str = "", *, include_private: bool) -> list[Memory]:
 
             vector = get_embeddings().embed_query(QUERY_PROMPT.format(cleaned))
             distance = Memory.embedding.cosine_distance(vector).label("distance")
-            stmt = (
-                statement.where(Memory.embedding.is_not(None))
-                .order_by(distance)
-                .limit(20)
-            )
+            stmt = statement.where(Memory.embedding.is_not(None)).order_by(distance).limit(20)
             with get_sessionmaker()() as session:
                 rows = session.scalars(stmt).all()
             if rows:

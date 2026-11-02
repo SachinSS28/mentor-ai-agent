@@ -12,8 +12,12 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-HKO_WARN_URL = "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en"
-HKO_WEATHER_URL = "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en"
+HKO_WARN_URL = (
+    "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=warnsum&lang=en"
+)
+HKO_WEATHER_URL = (
+    "https://data.weather.gov.hk/weatherAPI/opendata/weather.php?dataType=rhrread&lang=en"
+)
 TIMEOUT = 6.0
 
 

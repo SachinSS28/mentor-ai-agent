@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from mentor.agent.tools import format_task
 from mentor.db.models import Task
 
@@ -29,3 +31,13 @@ def test_pending_reminder_is_shown_until_it_has_gone_out() -> None:
     assert format_task(task, hk) == "- T5 Call WSD (P2, reminder Fri 23 Oct 09:00)"
     task.reminded_at = remind
     assert format_task(task, hk) == "- T5 Call WSD (P2)"
+
+
+def test_weather_elsewhere_comes_back_as_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    from mentor.agent import tools
+    from mentor.mcp_servers.web_tools import search as web
+
+    found = [web.WebResult("Tokyo weather today", "https://example.org/tokyo", "12°C and rain")]
+    monkeypatch.setattr(tools.web, "search", lambda query, max_results: found)
+    reply = tools.check_weather.invoke({"city": "Tokyo"})
+    assert isinstance(reply, str) and "Tokyo weather today" in reply

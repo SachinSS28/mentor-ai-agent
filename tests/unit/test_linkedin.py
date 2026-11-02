@@ -307,3 +307,43 @@ def test_tests_never_reach_the_real_gateway() -> None:
     # tests/conftest.py points every test away from the gateway running on this Mac.
     with pytest.raises(client.LinkedInUnavailable, match="isn't set up on the Mac yet"):
         client.call("search_jobs", keywords="anything")
+
+
+def test_safari_opens_linkedin_pages_only(
+    mentor_gateway: FastMCP, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mentor.agent import tools
+
+    assert guard.safari_allowed("https://www.linkedin.com/jobs/view/4100000101/")
+    assert guard.safari_allowed("https://hk.linkedin.com/in/x")
+    assert guard.safari_allowed("https://lnkd.in/abc")
+    for url in (
+        "http://www.linkedin.com/jobs/",
+        "https://evil.example/www.linkedin.com",
+        "https://linkedin.com.evil.example/",
+        "https://notlinkedin.com/",
+        "file:///etc/passwd",
+    ):
+        assert not guard.safari_allowed(url), url
+
+    monkeypatch.setattr(tools, "linkedin", lambda tool, **a: pytest.fail("opened"))
+    reply = tools.open_in_safari.invoke({"item": "https://evil.example/login"})
+    assert reply.startswith("Only LinkedIn pages open in Safari from here")
+    opened: list[str] = []
+
+    def gateway_opens(tool: str, **arguments: Any) -> dict[str, Any]:
+        opened.append(arguments["url"])
+        return {"result": "Opened it in Safari."}
+
+    monkeypatch.setattr(tools, "linkedin", gateway_opens)
+    tools.open_in_safari.invoke({"item": "water engineer"})
+    assert opened == ["https://www.linkedin.com/search/results/all/?keywords=water+engineer"]
+
+    async def gateway_refuses() -> Any:
+        async with Client(mentor_gateway) as c:
+            return await c.call_tool("open_in_safari", {"url": "https://evil.example/"})
+
+    refused = anyio.run(gateway_refuses)
+    assert refused.structured_content == {
+        "result": "Only LinkedIn pages open in Safari: https://evil.example/"
+    }

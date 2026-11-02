@@ -161,3 +161,26 @@ def test_other_bad_requests_get_the_generic_reply() -> None:
     update = message_from(42)
     handle_error(update, claude_error(anthropic.BadRequestError, 400, "messages: invalid"))
     assert "BadRequestError" in update.effective_message.reply_text.await_args.args[0]
+
+
+def test_a_morning_failure_doesnt_cost_the_evening_or_the_review(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from mentor.channels.telegram import bot
+
+    def gmail_timed_out(now: datetime) -> str:
+        raise TimeoutError("The read operation timed out")
+
+    sent: list[str] = []
+
+    async def tell(graph: Any, telegram: Any, chat_id: int, text: str) -> None:
+        sent.append(text)
+
+    monkeypatch.setattr(bot.morning, "tick", gmail_timed_out)
+    monkeypatch.setattr(bot.dhamma, "evening_tick", lambda now: "Evening reflection")
+    monkeypatch.setattr(bot.review, "tick", lambda now: "Weekly review")
+    monkeypatch.setattr(bot.library, "tick", lambda now: None)
+    monkeypatch.setattr(bot.linkedin, "notice", lambda now: None)
+    monkeypatch.setattr(bot, "tell_owner", tell)
+    asyncio.run(bot.make_job_desk(Mock(), 1)(Mock()))
+    assert sent == ["Evening reflection", "Weekly review"]

@@ -240,4 +240,6 @@ def search_link(kind: str, words: str, location: str = "") -> str:
         return f"{SITE}/jobs/search/?keywords={query}{place}"
     if kind == "people":
         return f"{SITE}/search/results/people/?keywords={query}"
+    if kind == "all":
+        return f"{SITE}/search/results/all/?keywords={query}"
     return f"{SITE}/search/results/content/?keywords={query}"

@@ -46,3 +46,7 @@ recordings/
 xcuserdata/
 DerivedData/
 *.xcuserstate
+
+# Local exports and backups (image archives, database dumps): never committed.
+*.tar
+*.tar.zst

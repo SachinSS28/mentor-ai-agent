@@ -1,6 +1,7 @@
 """`mentor` command: chat in the terminal or run the Telegram bot."""
 
 import argparse
+import os
 from collections.abc import Sequence
 
 import httpx
@@ -66,6 +67,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     commands.add_parser(
         "watch", help="on the Mac: keep the activity journal (what's in front, once a minute)"
     )
+    commands.add_parser(
+        "awake", help="on the Mac: keep it from sleeping while on power, so Mentor keeps running"
+    )
     linkedin = commands.add_parser(
         "linkedin", help="on the Mac: run the read-only LinkedIn gateway for the bot"
     )
@@ -80,6 +84,10 @@ def main(argv: Sequence[str] | None = None) -> None:
 
         failover.run_standby() if args.command == "standby" else failover.sync_now()
         return
+
+    if args.command == "awake":
+        # caffeinate -s holds the Mac awake only on power; the display still sleeps.
+        os.execv("/usr/bin/caffeinate", ["caffeinate", "-s"])  # noqa: S606 (fixed command)
 
     if args.command == "watch":
         from mentor.activity import watch
