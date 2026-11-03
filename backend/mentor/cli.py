@@ -48,6 +48,31 @@ def preflight() -> None:
         raise SystemExit(problem)
 
 
+def run_outbox(url: str | None, test: bool) -> None:
+    from datetime import datetime
+
+    from mentor import outbox
+    from mentor.charter import owner_timezone
+
+    now = datetime.now(owner_timezone())
+    try:
+        if url:
+            outbox.connect(url)
+            print("Connected: the outbox has the bot's key and Mentor's secret.")
+        cfg = outbox.config()
+        if cfg is None:
+            raise SystemExit("No outbox yet. Deploy infra/outbox/Code.gs, then --connect URL.")
+        extra = [outbox.test_message(now)] if url or test else []
+        if not outbox.sync(now, extra):
+            raise SystemExit("The outbox didn't take the plan; see the log above.")
+        status = outbox.post(cfg, "status")
+    except outbox.OutboxError as error:
+        raise SystemExit(f"Outbox: {error}") from None
+    print(f"The outbox holds {status.get('pending', 0)} message(s).")
+    if extra:
+        print("A test message reaches Telegram in about a minute.")
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="mentor", description="Mentor: your AI chief of staff")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -73,6 +98,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     commands.add_parser(
         "awake", help="on the Mac: keep it from sleeping while on power, so Mentor keeps running"
     )
+    outbox = commands.add_parser(
+        "outbox", help="the Google outbox: messages that arrive even while the Mac is off"
+    )
+    outbox.add_argument("--connect", metavar="URL", help="connect a newly deployed outbox")
+    outbox.add_argument("--test", action="store_true", help="send a test message in a minute")
     linkedin = commands.add_parser(
         "linkedin", help="on the Mac: run the read-only LinkedIn gateway for the bot"
     )
@@ -86,6 +116,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         from mentor.channels.telegram import failover
 
         failover.run_standby() if args.command == "standby" else failover.sync_now()
+        return
+
+    if args.command == "outbox":
+        run_outbox(args.connect, args.test)
         return
 
     if args.command == "awake":

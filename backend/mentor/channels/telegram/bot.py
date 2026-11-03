@@ -21,18 +21,18 @@ from telegram.constants import ChatAction, ParseMode
 from telegram.error import BadRequest, NetworkError
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from mentor import checkin, meetings, morning, reading, review, word
+from mentor import checkin, meetings, morning, outbox, reading, review, word
 from mentor.agent.app import open_agent
 from mentor.agent.graph import MentorGraph, ask
 from mentor.channels.telegram.formatting import to_telegram_html
 from mentor.charter import get_charter, owner_timezone
 from mentor.db.heartbeat import beat
-from mentor.db.models import Task
 from mentor.db.session import get_engine
 from mentor.db.state import get_state, set_state
 from mentor.linkedin import guard as linkedin
 from mentor.mcp_servers.google_tools.auth import GoogleNotConnectedError
 from mentor.mcp_servers.mentor_core import tasks
+from mentor.mcp_servers.mentor_core.tasks import reminder_text
 from mentor.practice import dhamma
 from mentor.reading import SHARED_CHARS, shared_text
 from mentor.research import library, reports
@@ -357,6 +357,11 @@ def make_job_desk(
         for text in (digest, evening, weekly, paused):
             if text:
                 await tell_owner(graph, context.bot, chat_id, text)
+        try:
+            # After the morning message: its fallback in the outbox is no longer needed.
+            await asyncio.to_thread(outbox.sync, now, (), add_to_thread(graph, chat_id))
+        except Exception:
+            log.exception("Couldn't update the outbox; trying again in 15 minutes")
 
     return run
 
@@ -368,13 +373,6 @@ async def tell_owner(graph: MentorGraph, bot: Any, chat_id: int, text: str) -> N
     config: RunnableConfig = {"configurable": {"thread_id": f"telegram-{chat_id}"}}
     update = {"messages": [AIMessage(text)]}
     await asyncio.to_thread(graph.update_state, config, update, as_node="agent")
-
-
-def reminder_text(task: Task) -> str:
-    due = f" (due {task.due.astimezone(owner_timezone()):%a %d %b %H:%M})" if task.due else ""
-    notes = f"\n{task.notes}" if task.notes else ""
-    done = f'Say "done T{task.ref}" when it\'s done.'
-    return f"⏰ **Reminder, T{task.ref}:** {task.title}{due}{notes}\n{done}"
 
 
 def make_checkins(
@@ -455,10 +453,28 @@ def make_reminders(
             log.exception("Couldn't check reminders; trying again in a minute")
             return
         for task in due:
+            if not await asyncio.to_thread(outbox.bot_sends, task, now):
+                continue  # the Google outbox sends it (and does so even if the Mac sleeps)
             await tell_owner(graph, context.bot, chat_id, reminder_text(task))
             await asyncio.to_thread(tasks.mark_reminded, [task.ref], now)
+        try:
+            if outbox.config() is not None and await asyncio.to_thread(outbox.changed, now):
+                await asyncio.to_thread(outbox.sync, now, (), add_to_thread(graph, chat_id))
+        except Exception:
+            log.exception("Couldn't update the outbox; trying again in a minute")
 
     return run
+
+
+def add_to_thread(graph: MentorGraph, chat_id: int) -> Callable[[str], None]:
+    """Adds a message the outbox delivered (perhaps while the Mac was off) to the conversation,
+    so replies to it ("done T3") have it in context."""
+    config: RunnableConfig = {"configurable": {"thread_id": f"telegram-{chat_id}"}}
+
+    def add(text: str) -> None:
+        graph.update_state(config, {"messages": [AIMessage(text)]}, as_node="agent")
+
+    return add
 
 
 def run_telegram_bot() -> None:

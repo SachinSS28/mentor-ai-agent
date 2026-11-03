@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     linkedin_gateway_url: str = "http://127.0.0.1:8765/mcp"
     # Word documents Mentor writes (cover letters, reports); the bot's container mounts it.
     documents_dir: Path = Path.home() / "Documents" / "Mentor"
+    # The Google outbox's address and Mentor's secret for it (`mentor outbox --connect`).
+    outbox_path: Path = PRIVATE_DIR / "outbox.json"
     linkedin_token_path: Path = PRIVATE_DIR / "linkedin_gateway_token"
 
 

@@ -5,6 +5,7 @@ from datetime import date, datetime, time, timedelta, tzinfo
 
 from sqlalchemy import or_, select, update
 
+from mentor.charter import owner_timezone
 from mentor.db.models import Task
 from mentor.db.session import get_sessionmaker
 
@@ -95,6 +96,29 @@ def reminders_due(now: datetime) -> list[Task]:
     )
     with get_sessionmaker()() as session:
         return list(session.scalars(query))
+
+
+def upcoming_reminders(now: datetime, until: datetime) -> list[Task]:
+    """Open tasks with a reminder still to come before `until`, soonest first."""
+    query = (
+        select(Task)
+        .where(
+            Task.status == "open",
+            Task.remind_at > now,
+            Task.remind_at <= until,
+            Task.reminded_at.is_(None),
+        )
+        .order_by(Task.remind_at)
+    )
+    with get_sessionmaker()() as session:
+        return list(session.scalars(query))
+
+
+def reminder_text(task: Task) -> str:
+    due = f" (due {task.due.astimezone(owner_timezone()):%a %d %b %H:%M})" if task.due else ""
+    notes = f"\n{task.notes}" if task.notes else ""
+    done = f'Say "done T{task.ref}" when it\'s done.'
+    return f"⏰ **Reminder, T{task.ref}:** {task.title}{due}{notes}\n{done}"
 
 
 def mark_reminded(refs: Sequence[int], now: datetime) -> None:
