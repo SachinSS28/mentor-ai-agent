@@ -67,9 +67,27 @@ NEVER_DONE = re.compile(
 HONESTY_CHECK = (
     "Check of your last reply: it says you did something that no tool did in this turn (and you "
     "never send, connect, apply or message for the owner), so it wasn't done. Write the reply "
-    "again without claiming it: keep the rest, and offer to do or prepare it instead."
+    "again without claiming it: keep the rest, and offer to do or prepare it instead. Write to "
+    "the owner directly; don't mention this check or apologise."
 )
 NOTHING_CHANGED = "(Nothing was changed yet: say the word and I'll do it.)"
+
+# Words in the names of the errors a lost connection raises, across the libraries the tools use
+# (httpx, requests, urllib3, httplib2 for Google, google-auth, sockets).
+NETWORK_ERRORS = (
+    "ServerNotFound",
+    "ConnectionError",
+    "ConnectError",
+    "TransportError",
+    "NameResolution",
+    "gaierror",
+    "Timeout",
+    "MaxRetryError",
+)
+NO_CONNECTION = (
+    "No internet connection right now, so this couldn't be reached. Say so in one line and "
+    "answer from what you have."
+)
 NOT_MINE_TO_DO = "(That part wasn't done: I never send, connect, apply or message for you.)"
 
 # Small models answer "can you see my screen?" from what they believe about themselves ("No"),
@@ -124,13 +142,36 @@ def this_turn(messages: Sequence[BaseMessage]) -> Sequence[BaseMessage]:
 
 def changed_this_turn(messages: Sequence[BaseMessage]) -> bool:
     """Whether a tool that changes something ran successfully since the owner's last message.
-    Mentor's tools report failures starting with "Not" ("Not added: ...")."""
+    Mentor's tools report failures starting with "Not" ("Not added: ..."); a tool that raised
+    is marked as an error."""
     return any(
         isinstance(message, ToolMessage)
         and message.name in CHANGING_TOOLS
+        and message.status != "error"
         and not message.text.startswith("Not ")
         for message in this_turn(messages)
     )
+
+
+def lost_connection(error: BaseException) -> bool:
+    """Whether an error, or one that caused it, comes from a lost internet connection."""
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        names = [cls.__name__ for cls in type(current).__mro__]
+        if any(word in name for name in names for word in NETWORK_ERRORS):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+def tool_failed(error: Exception) -> str:
+    """A tool that raises tells the model why, and the turn goes on instead of ending in an
+    error (e.g. the calendar while the Mac has no internet)."""
+    if lost_connection(error):
+        return NO_CONNECTION
+    return f"This didn't work ({type(error).__name__}: {str(error)[:200]}). Say so in one line."
 
 
 def period_asked(question: str) -> str:
@@ -209,7 +250,7 @@ def build_graph(
 
     graph = StateGraph(MessagesState)
     graph.add_node("agent", agent)
-    graph.add_node("tools", ToolNode(tools))
+    graph.add_node("tools", ToolNode(tools, handle_tool_errors=tool_failed))
     graph.add_edge(START, "agent")
     graph.add_conditional_edges("agent", tools_condition)
     graph.add_edge("tools", "agent")

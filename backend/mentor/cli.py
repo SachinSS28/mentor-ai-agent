@@ -56,6 +56,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     chat.add_argument("--once", metavar="TEXT", help="ask one question, print the reply, exit")
     commands.add_parser("telegram", help="run the Telegram bot")
     commands.add_parser(
+        "local", help="run the chat page on this Mac (http://localhost:8790), works offline"
+    )
+    commands.add_parser(
         "standby", help="on the Mac: take over Telegram while the cloud server is down"
     )
     commands.add_parser(
@@ -120,6 +123,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         return
 
     preflight()
+    if args.command == "local":
+        from mentor.channels.local import serve
+
+        serve()
+        return
     if args.command == "chat":
         from mentor.channels.terminal import run_terminal_chat
 

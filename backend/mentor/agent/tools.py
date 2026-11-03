@@ -438,6 +438,7 @@ def list_contacts(query: str = "", status: str = "", limit: int = 15) -> str:
     return "\n".join(format_contact(p) for p in people)
 
 
+NO_INTERNET = "No internet connection right now, so the web can't be reached; say so in one line."
 LINKEDIN_RULES = (
     "The owner presses Connect, Apply and Message on LinkedIn; you prepare the text (connection "
     "notes under 200 characters). Give links exactly as written here."
@@ -631,6 +632,8 @@ def check_weather(city: str = "Hong Kong") -> str:
         return web.format_results(web.search(f"current weather in {city}", max_results=2))
     except (web.WebNotConnectedError, web.WebLimitError) as error:
         return str(error)
+    except httpx.ConnectError:
+        return NO_INTERNET
     except httpx.HTTPError:
         return "Weather search isn't answering right now; try again in a minute."
 
@@ -652,6 +655,8 @@ def search_web(query: str, recent: str = "", news: bool = False, max_results: in
         results = web.search(query, max_results, news, cast(web.TimeRange | None, period))
     except (web.WebNotConnectedError, web.WebLimitError) as error:
         return str(error)
+    except httpx.ConnectError:
+        return NO_INTERNET
     except httpx.HTTPError:
         return "Web search isn't answering right now; try again in a minute."
     if not results:
@@ -672,6 +677,8 @@ def read_webpage(url: str, question: str = "") -> str:
         text = web.read(url.strip(), question)
     except (web.WebNotConnectedError, web.WebLimitError, ValueError) as error:
         return str(error)
+    except httpx.ConnectError:
+        return NO_INTERNET
     except httpx.HTTPError:
         return "Web reading isn't answering right now; try again in a minute."
     return web.untrusted(f"Page: {url}\n{text}")

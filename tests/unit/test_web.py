@@ -115,3 +115,13 @@ def test_web_text_reaches_the_model_marked_untrusted(monkeypatch: pytest.MonkeyP
     page = read_webpage.invoke({"url": "https://rgc.edu.hk/call", "question": "deadline"})
     assert "Page: https://rgc.edu.hk/call\nDeadline 30 Nov" in page
     assert page.startswith('<untrusted source="web">')
+
+
+def test_no_internet_is_said_plainly(monkeypatch: pytest.MonkeyPatch) -> None:
+    def offline(*args: Any, **kwargs: Any) -> Any:
+        raise httpx.ConnectError("[Errno -3] Temporary failure in name resolution")
+
+    monkeypatch.setattr(web, "search", offline)
+    monkeypatch.setattr(web, "read", offline)
+    assert search_web.invoke({"query": "Hong Kong water news"}).startswith("No internet connection")
+    assert read_webpage.invoke({"url": "https://www.wsd.gov.hk/"}).startswith("No internet")

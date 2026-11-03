@@ -42,7 +42,7 @@ services:
       postgres: { condition: service_healthy }
     logging: *logging
 
-  telegram:
+  telegram: &app
     image: mentor:mac
     command: ["telegram"]
     restart: unless-stopped
@@ -62,6 +62,14 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
     logging: *logging
+
+  # Mentor on this Mac, without internet: the chat page at http://localhost:8790, same agent and
+  # conversation as Telegram. Published on 127.0.0.1 only.
+  local:
+    <<: *app
+    command: ["local"]
+    ports:
+      - "127.0.0.1:8790:8790"
 
 volumes:
   pgdata:

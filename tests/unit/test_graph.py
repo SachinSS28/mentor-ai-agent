@@ -241,3 +241,37 @@ def test_sending_connecting_or_applying_is_never_claimed(system_prompt: Any) -> 
     graph = build_graph(model, [add_task], system_prompt)
     reply = ask(graph, "Connect with P21 and remind me to follow up", "t1")
     assert reply == "I've added T1. Here's a note for you to send P21 when you connect: …"
+
+
+class ServerNotFoundError(Exception):
+    """httplib2's error when Google can't be reached (no internet)."""
+
+
+@tool
+def list_calendar_events(day: str = "today") -> str:
+    """The owner's calendar."""
+    raise ServerNotFoundError("Unable to find the server at www.googleapis.com")
+
+
+@tool
+def broken_add_task(title: str) -> str:
+    """Add a task."""
+    raise ValueError("the database is busy")
+
+
+def test_a_lost_connection_in_a_tool_doesnt_end_the_turn(system_prompt: Any) -> None:
+    reply = "No internet right now, so I can't see your calendar; your tasks are clear."
+    model = scripted(call("list_calendar_events"), reply)
+    graph = build_graph(model, [list_calendar_events], system_prompt, InMemorySaver())
+    assert ask(graph, "What's on today?", "t1") == reply
+    assert tool_results(graph)[0].startswith("No internet connection right now")
+
+
+def test_a_failed_tool_says_so_and_never_counts_as_done(system_prompt: Any) -> None:
+    broken_add_task.name = "add_task"  # a changing tool
+    model = scripted(call("add_task", title="Register"), "I've added T1: Register.", "Shall I?")
+    graph = build_graph(model, [broken_add_task], system_prompt, InMemorySaver())
+    assert ask(graph, "Remind me to register", "t1") == "Shall I?"  # the claim was rewritten
+    assert tool_results(graph) == [
+        "This didn't work (ValueError: the database is busy). Say so in one line."
+    ]
