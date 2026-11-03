@@ -57,8 +57,10 @@ services:
       # The read-only LinkedIn gateway on the Mac (`mentor linkedin`), and the token it made.
       MENTOR_LINKEDIN_GATEWAY_URL: http://host.docker.internal:8765/mcp
       MENTOR_LINKEDIN_TOKEN_PATH: /secrets/linkedin_gateway_token
+      MENTOR_DOCUMENTS_DIR: /documents
     volumes:
       - ${HOME}/.config/mentor:/secrets # the Google sign-in and LinkedIn token, owner-only on the Mac
+      - ${HOME}/Documents/Mentor:/documents # Word files Mentor writes
     depends_on:
       migrate: { condition: service_completed_successfully }
     logging: *logging

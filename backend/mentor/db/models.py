@@ -272,6 +272,23 @@ class Memory(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class Feedback(Base):
+    """The owner's thumbs up or down on an answer in the chat page. A note becomes a lesson:
+    a preference memory Mentor follows from then on (memory_id)."""
+
+    __tablename__ = "feedback"
+    __table_args__ = (one_of("rating", ("up", "down")),)
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    rating: Mapped[str] = mapped_column(String(8))
+    note: Mapped[str | None] = mapped_column(Text)
+    question: Mapped[str | None] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
+    lesson: Mapped[str | None] = mapped_column(Text)
+    memory_id: Mapped[uuid.UUID | None] = mapped_column(UUID)
+    created_at: Mapped[datetime] = created_at()
+
+
 class Approval(Base):
     """A T2 action waiting for you. Sentinel executes the stored payload, never a new one."""
 

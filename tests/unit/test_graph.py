@@ -1,8 +1,18 @@
+import json
+import re
+from collections.abc import Iterator
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    BaseMessage,
+    HumanMessage,
+    ToolMessage,
+)
+from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import InMemorySaver
 from tests.helpers import ScriptedModel, call, fake_open_tasks, scripted
@@ -275,3 +285,73 @@ def test_a_failed_tool_says_so_and_never_counts_as_done(system_prompt: Any) -> N
     assert tool_results(graph) == [
         "This didn't work (ValueError: the database is busy). Say so in one line."
     ]
+
+
+class StreamingModel(ScriptedModel):
+    """Streams like a real chat model: a tool call in one piece, an answer word by word."""
+
+    def _stream(
+        self, messages: Any, stop: Any = None, run_manager: Any = None, **kwargs: Any
+    ) -> Iterator[ChatGenerationChunk]:
+        reply = next(self.messages)
+        reply = AIMessage(reply) if isinstance(reply, str) else reply
+        if reply.tool_calls:
+            pieces = [
+                AIMessageChunk(
+                    content="",
+                    tool_call_chunks=[
+                        {
+                            "name": c["name"],
+                            "args": json.dumps(c["args"]),
+                            "id": c["id"],
+                            "index": i,
+                        }
+                        for i, c in enumerate(reply.tool_calls)
+                    ],
+                )
+            ]
+        else:
+            pieces = [AIMessageChunk(content=w) for w in re.split(r"(?<= )", reply.text) if w]
+        for piece in pieces:
+            chunk = ChatGenerationChunk(message=piece)
+            if run_manager:
+                run_manager.on_llm_new_token(piece.text, chunk=chunk)
+            yield chunk
+
+
+def test_answers_stream_while_mentor_works(system_prompt: Any) -> None:
+    from mentor.agent.graph import stream_ask
+
+    model = StreamingModel(
+        messages=iter([call("fake_open_tasks"), "You have one open task: the quarterly report."])
+    )
+    graph = build_graph(model, [fake_open_tasks], system_prompt, InMemorySaver())
+    events = list(stream_ask(graph, "What's open?", "t1", SENT))
+    assert events[0] == ("tool", "fake_open_tasks")
+    words = "".join(value for kind, value in events if kind == "token")
+    assert words == "You have one open task: the quarterly report."
+    assert events[-1] == ("final", "You have one open task: the quarterly report.")
+
+
+@tool
+def make_word_document(title: str, content: str) -> str:
+    """Save a Word file."""
+    return f"Saved the Word file in Documents/Mentor: [{title}.docx](/files/{title}.docx)"
+
+
+def test_a_requested_word_file_is_saved_not_just_written(system_prompt: Any) -> None:
+    note = "Dear Prof. Lee,\n\nThank you for meeting me."
+    model = scripted(
+        f"Here is the note, ready for you to save:\n\n{note}",  # written, not saved
+        call("make_word_document", title="Thank you Prof Lee", content=note),
+        "Saved it: [Thank you Prof Lee.docx](/files/Thank you Prof Lee.docx)",
+    )
+    graph = build_graph(model, [make_word_document], system_prompt, InMemorySaver())
+    reply = ask(graph, "Write a thank-you note to Prof. Lee as a Word file", "t1")
+    assert reply.startswith("Saved it: [Thank you Prof Lee.docx]")
+    assert tool_results(graph)[0].startswith("Saved the Word file")
+
+
+def test_answers_without_a_word_request_are_left_alone(system_prompt: Any) -> None:
+    graph = build_graph(scripted("Dear Prof. Lee, thank you."), [make_word_document], system_prompt)
+    assert ask(graph, "Draft a thank-you note to Prof. Lee", "t1") == "Dear Prof. Lee, thank you."

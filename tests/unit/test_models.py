@@ -11,6 +11,7 @@ EXPECTED_TABLES = {
     "trips",
     "expenses",
     "memories",
+    "feedback",
     "approvals",
     "audit_log",
     "notion_sync",

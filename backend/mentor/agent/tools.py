@@ -13,7 +13,7 @@ import httpx
 from langchain_core.tools import BaseTool, tool
 from sqlalchemy import select
 
-from mentor import activity
+from mentor import activity, word
 from mentor.agent.models import get_chat_model, load_models_config
 from mentor.briefing import store as briefing_store
 from mentor.charter import get_charter, owner_timezone
@@ -312,6 +312,24 @@ def check_job_alerts() -> str:
         return str(error)
     totals = ", ".join(f"{n} {status}" for status, n in sorted(store.counts().items()))
     return f"{new} new jobs found, {scored} scored. On the Job Desk now: {totals}."
+
+
+@tool
+def make_word_document(title: str, content: str) -> str:
+    """Save a Word (.docx) file the owner asked for: a cover letter, letter, report, CV points or
+    notes. Write the complete text first and pass all of it as content, in Markdown: # headings,
+    - bullets, 1. numbered items, **bold**, | tables |; a blank line between paragraphs. Returns
+    the file's link: give it to the owner exactly as written.
+
+    title: a short name for the file, e.g. "Cover letter Black & Veatch".
+    """
+    if len(content.strip()) < 20:
+        return "Not saved: write the document's full text first, then save it."
+    try:
+        path = word.save(title, content, get_charter().owner.name)
+    except OSError as error:
+        return f"Not saved: the documents folder can't be written ({error.strerror})."
+    return f"Saved the Word file in Documents/Mentor: {word.link(path)}"
 
 
 @tool
@@ -863,6 +881,7 @@ TOOLS: list[BaseTool] = [
     find_jobs,
     update_job,
     check_job_alerts,
+    make_word_document,
     draft_email,
     find_research,
     find_experts,

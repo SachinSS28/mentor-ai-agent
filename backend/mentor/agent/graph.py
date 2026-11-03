@@ -1,14 +1,15 @@
 """The orchestrator graph: the model answers or calls tools until it can answer."""
 
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
     AIMessage,
+    AIMessageChunk,
     BaseMessage,
     HumanMessage,
     SystemMessage,
@@ -16,6 +17,7 @@ from langchain_core.messages import (
     trim_messages,
 )
 from langchain_core.messages.utils import count_tokens_approximately
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import START, MessagesState, StateGraph
@@ -41,6 +43,7 @@ CHANGING_TOOLS = frozenset(
         "complete_task",
         "add_calendar_block",
         "draft_email",
+        "make_word_document",
         "remember",
         "forget_memory",
         "update_job",
@@ -101,6 +104,16 @@ SCREEN_QUESTION = re.compile(
     r"|\bwhat\s+(?:did|have)\s+i\s+(?:been\s+)?(?:do(?:ne|ing)?|work(?:ed|ing)?\s+on)\b",
     re.IGNORECASE,
 )
+# "... as a Word file", "a .docx", "in Word": the owner wants a document saved, not just written.
+WORD_REQUEST = re.compile(
+    r"\bword\s+(?:file|document|doc)\b|\.?docx\b|\bin (?:ms )?word\b|\bms word\b", re.IGNORECASE
+)
+WORD_NUDGE = (
+    "Check of your last reply: the owner asked for a Word file, but you didn't save one. Call "
+    "make_word_document now with a short title and the document's text alone (no preamble), "
+    "so the owner gets the file."
+)
+
 # "The activity journal shows ...", "according to your journal": activity reported as looked up.
 CLAIMED_ACTIVITY = re.compile(
     r"\bjournal\s+(?:shows|says|records|indicates|tells)\b"
@@ -184,6 +197,14 @@ def period_asked(question: str) -> str:
     return "today"
 
 
+def word_file_missing(messages: Sequence[BaseMessage]) -> bool:
+    """Whether the owner asked for a Word file this turn and none was saved."""
+    turn = this_turn(messages)
+    asked = bool(turn) and isinstance(turn[0], HumanMessage) and WORD_REQUEST.search(turn[0].text)
+    saved = any(isinstance(m, ToolMessage) and m.name == "make_word_document" for m in turn)
+    return bool(asked) and not saved
+
+
 def activity_lookup(messages: Sequence[BaseMessage], reply: BaseMessage | None) -> AIMessage | None:
     """A my_activity call to make before answering: for a question about the screen (reply is
     None, the model hasn't been asked yet), or for a reply that describes the owner's activity
@@ -217,6 +238,7 @@ def build_graph(
     stored conversation is never changed, so Claude still gets its turns back unmodified."""
     bound = model.bind_tools(tools)
     reads_activity = "my_activity" in {t.name for t in tools}
+    writes_word = "make_word_document" in {t.name for t in tools}
 
     def agent(state: MessagesState) -> dict[str, list[BaseMessage]]:
         messages = state["messages"]
@@ -231,6 +253,12 @@ def build_graph(
         final = isinstance(reply, AIMessage) and not reply.tool_calls
         if final and reads_activity and (lookup := activity_lookup(messages, reply)):
             return {"messages": [lookup]}  # the made-up description is dropped
+        if final and writes_word and word_file_missing(messages):
+            # Small models often paste the document into the reply instead of saving it: ask
+            # once (the request isn't kept) for the tool call that saves what it wrote.
+            saved = bound.invoke([*prompt, AIMessage(reply.text), HumanMessage(WORD_NUDGE)])
+            if isinstance(saved, AIMessage) and saved.tool_calls:
+                return {"messages": [saved]}
         if final and claims_unbacked_action(reply, messages):
             reply = honest(prompt, reply, messages)
         return {"messages": [reply]}
@@ -257,6 +285,14 @@ def build_graph(
     return graph.compile(checkpointer=checkpointer)
 
 
+def reply_text(reply: BaseMessage) -> str:
+    """What the owner sees of Mentor's final message."""
+    if reply.response_metadata.get("stop_reason") == "refusal":
+        return REFUSAL_REPLY
+    text = reply.text if isinstance(reply, AIMessage) else str(reply.content)
+    return text.strip() or EMPTY_REPLY
+
+
 def ask(graph: MentorGraph, text: str, thread_id: str, sent_at: datetime | None = None) -> str:
     """Send one message in a conversation thread and return Mentor's reply."""
     sent_at = sent_at or datetime.now(owner_timezone())
@@ -264,8 +300,32 @@ def ask(graph: MentorGraph, text: str, thread_id: str, sent_at: datetime | None 
         {"messages": [HumanMessage(stamp(text, sent_at))]},
         {"configurable": {"thread_id": thread_id}},
     )
-    reply = result["messages"][-1]
-    if reply.response_metadata.get("stop_reason") == "refusal":
-        return REFUSAL_REPLY
-    text = reply.text if isinstance(reply, AIMessage) else str(reply.content)
-    return text.strip() or EMPTY_REPLY
+    return reply_text(result["messages"][-1])
+
+
+def stream_ask(
+    graph: MentorGraph, text: str, thread_id: str, sent_at: datetime | None = None
+) -> Iterator[tuple[str, str]]:
+    """Like ask, while Mentor works: ("tool", name) when a tool starts, ("token", text) as the
+    answer is written, then ("final", reply). The final reply is the one to keep: the honesty
+    and activity checks can still replace what was streamed."""
+    sent_at = sent_at or datetime.now(owner_timezone())
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+    started: set[str] = set()
+    for event in graph.stream(
+        {"messages": [HumanMessage(stamp(text, sent_at))]}, config, stream_mode="messages"
+    ):
+        item, meta = cast(tuple[BaseMessage, dict[str, Any]], event)
+        if meta.get("langgraph_node") != "agent" or not isinstance(item, AIMessage):
+            continue
+        if isinstance(item, AIMessageChunk):
+            calls = [chunk["name"] or "" for chunk in item.tool_call_chunks]
+        else:
+            calls = [call["name"] for call in item.tool_calls]
+        for name in calls:
+            if name and name not in started:
+                started.add(name)
+                yield "tool", name
+        if not calls and isinstance(item, AIMessageChunk) and item.text:
+            yield "token", item.text
+    yield "final", reply_text(graph.get_state(config).values["messages"][-1])

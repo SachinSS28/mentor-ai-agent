@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # LinkedIn, through Mentor's read-only gateway on the Mac (`mentor linkedin`), which makes its
     # own token on first start. The bot's container reaches it at host.docker.internal.
     linkedin_gateway_url: str = "http://127.0.0.1:8765/mcp"
+    # Word documents Mentor writes (cover letters, reports); the bot's container mounts it.
+    documents_dir: Path = Path.home() / "Documents" / "Mentor"
     linkedin_token_path: Path = PRIVATE_DIR / "linkedin_gateway_token"
 
 

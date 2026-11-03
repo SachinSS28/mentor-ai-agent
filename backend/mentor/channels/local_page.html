@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mentor</title>
+<style>
+:root {
+  --bg: #f6f5f2; --card: #ffffff; --ink: #1d1d1f; --muted: #6e6e73; --line: #e3e1dc;
+  --me: #2f5d50; --me-ink: #ffffff; --soft: #eef3f1; --warn: #8a5a00; --warn-bg: #fff4dc;
+  --code: #f1f0ec;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161617; --card: #232325; --ink: #f2f2f2; --muted: #a1a1a6; --line: #343437;
+    --me: #3f7d6c; --soft: #20302b; --warn: #ffd38a; --warn-bg: #3a2e14; --code: #2c2c2f;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); display: flex; flex-direction: column;
+  font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+}
+header {
+  padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 10px;
+  align-items: baseline;
+}
+header h1 { font-size: 18px; margin: 0; }
+#state { color: var(--muted); font-size: 13px; }
+#note {
+  display: none; margin: 10px 16px 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--warn-bg); color: var(--warn); font-size: 14px;
+}
+#log {
+  flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+}
+.turn { align-self: flex-start; max-width: min(760px, 92%); }
+.msg { padding: 10px 14px; border-radius: 14px; overflow-wrap: anywhere; }
+.mentor { background: var(--card); border: 1px solid var(--line); }
+.you {
+  align-self: flex-end; max-width: min(680px, 85%); background: var(--me); color: var(--me-ink);
+}
+.you a { color: var(--me-ink); }
+.live { white-space: pre-wrap; }
+.msg > :first-child { margin-top: 0; }
+.msg > :last-child { margin-bottom: 0; }
+.msg p { margin: 0 0 8px; }
+.msg ul, .msg ol { margin: 4px 0 8px; padding-left: 22px; }
+.msg h1, .msg h2, .msg h3 { margin: 10px 0 6px; line-height: 1.3; }
+.msg h1 { font-size: 20px; } .msg h2 { font-size: 18px; } .msg h3 { font-size: 16px; }
+.msg code { background: var(--code); padding: 1px 5px; border-radius: 5px; font-size: 14px; }
+.msg pre { background: var(--code); padding: 10px; border-radius: 8px; overflow-x: auto; }
+.msg pre code { padding: 0; background: none; }
+.msg table { border-collapse: collapse; margin: 6px 0 10px; font-size: 15px; }
+.msg th, .msg td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; }
+.msg th { background: var(--soft); }
+.msg a.file {
+  display: inline-block; margin: 4px 0; padding: 6px 10px; border-radius: 8px;
+  background: var(--soft); text-decoration: none; color: var(--ink); font-weight: 600;
+}
+.status { align-self: flex-start; color: var(--muted); font-style: italic; font-size: 14px; }
+.tools { display: flex; gap: 4px; margin-top: 4px; }
+.tools button, .fb button {
+  border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer;
+  font: inherit; font-size: 13px; padding: 2px 8px; border-radius: 8px;
+}
+.tools button:hover, .fb button:hover { border-color: var(--line); color: var(--ink); }
+.tools button.chosen { border-color: var(--me); color: var(--ink); }
+.tools button:disabled { cursor: default; }
+.fb { display: flex; gap: 6px; margin-top: 6px; }
+.fb input {
+  flex: 1; min-width: 240px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--card); color: var(--ink); font: inherit; font-size: 14px;
+}
+.said { color: var(--muted); font-size: 13px; margin-top: 4px; }
+form { border-top: 1px solid var(--line); padding: 10px 16px 16px; }
+#files { display: flex; flex-wrap: wrap; gap: 6px; }
+#files:not(:empty) { margin-bottom: 8px; }
+.chip {
+  display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px;
+  background: var(--soft); font-size: 13px;
+}
+.chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; }
+.row { display: flex; gap: 8px; align-items: flex-end; }
+textarea {
+  flex: 1; resize: none; min-height: 46px; max-height: 220px; padding: 12px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit;
+}
+#attach {
+  height: 46px; width: 46px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); cursor: pointer; font-size: 18px;
+}
+#send {
+  height: 46px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--me);
+  color: #fff; font: inherit; cursor: pointer;
+}
+#send:disabled { opacity: .5; cursor: default; }
+#drop {
+  position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+  background: rgba(47, 93, 80, .85); color: #fff; font-size: 20px; z-index: 10;
+}
+#drop.on { display: flex; }
+</style>
+</head>
+<body>
+<header><h1>Mentor</h1><span id="state">on this Mac</span></header>
+<div id="note" role="status"></div>
+<main id="log" aria-live="polite"></main>
+<div id="drop">Drop photos, PDFs or Word files to share them with Mentor</div>
+<form id="form">
+  <div id="files"></div>
+  <div class="row">
+    <button type="button" id="attach" title="Share a photo, PDF or Word file"
+      aria-label="Share a file">📎</button>
+    <input type="file" id="picker" multiple hidden
+      accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    <textarea id="text" rows="1" autofocus
+      placeholder="Write to Mentor… (Shift+Enter for a new line; paste or drop files)"></textarea>
+    <button id="send" type="submit">Send</button>
+  </div>
+</form>
+<script>
+const OFFLINE_NOTE = __OFFLINE_NOTE__;
+const MAX_FILES = 3, MAX_BYTES = 15e6;
+const $ = id => document.getElementById(id);
+const log = $("log"), text = $("text"), send = $("send"), chips = $("files");
+let pending = [];
+let working = false;
+
+function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+function escapeHtml(s) { const d = el("div"); d.textContent = s; return d.innerHTML; }
+function scroll() { log.scrollTop = log.scrollHeight; }
+function post(url, body) {
+  return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body) });
+}
+function button(label, title, onClick) {
+  const b = el("button"); b.type = "button"; b.textContent = label; b.title = title;
+  b.setAttribute("aria-label", title); b.addEventListener("click", onClick); return b;
+}
+async function copyText(s) {
+  try { await navigator.clipboard.writeText(s); return; } catch (e) { /* fall back below */ }
+  const area = el("textarea"); area.value = s; document.body.append(area); area.select();
+  document.execCommand("copy"); area.remove();
+}
+function fixLinks(root) {
+  root.querySelectorAll("a").forEach(a => {
+    const href = a.getAttribute("href") || "";
+    if (href.startsWith("/files/")) {
+      a.setAttribute("download", ""); a.className = "file"; a.textContent = "📄 " + a.textContent;
+    } else { a.target = "_blank"; a.rel = "noopener noreferrer"; }
+  });
+}
+
+function addYou(html) {
+  const b = el("div", "msg you"); b.innerHTML = html; fixLinks(b); log.append(b); scroll();
+}
+
+function addMentor(html, answer, question) {
+  const turn = el("div", "turn"), bubble = el("div", "msg mentor");
+  bubble.innerHTML = html; fixLinks(bubble); turn.append(bubble);
+  if (answer !== null) turn.append(controls(answer, question));
+  log.append(turn); scroll();
+}
+
+function controls(answer, question) {
+  const box = el("div"), bar = el("div", "tools"), fb = el("div", "fb"), said = el("div", "said");
+  fb.hidden = true;
+  const note = el("input"); note.maxLength = 600;
+  note.placeholder = "What should be different? (optional)";
+  const copy = button("Copy", "Copy this answer", async () => {
+    await copyText(answer); copy.textContent = "Copied";
+    setTimeout(() => { copy.textContent = "Copy"; }, 1500);
+  });
+  const up = button("👍", "Helpful", () => rate("up"));
+  const down = button("👎", "Not helpful: tell Mentor why", () => {
+    fb.hidden = !fb.hidden; if (!fb.hidden) note.focus();
+  });
+  const save = button("Save", "Save this feedback", () => rate("down", note.value));
+  note.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); save.click(); }
+  });
+  async function rate(rating, words = "") {
+    up.disabled = down.disabled = save.disabled = true;
+    said.textContent = words.trim() ? "Saving what Mentor should learn…" : "";
+    try {
+      const r = await post("/feedback", { rating, note: words, question, answer });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "failed");
+      fb.hidden = true; (rating === "up" ? up : down).classList.add("chosen");
+      said.textContent = d.lesson ? "Mentor will remember: " + d.lesson : "Thanks, noted.";
+    } catch (e) {
+      said.textContent = "Couldn't save that feedback.";
+      up.disabled = down.disabled = save.disabled = false;
+    }
+  }
+  fb.append(note, save); bar.append(copy, up, down); box.append(bar, fb, said);
+  return box;
+}
+
+function status(online) {
+  $("state").textContent = online ? "on this Mac · online" : "on this Mac · no internet";
+  $("note").style.display = online ? "none" : "block";
+  $("note").textContent = online ? "" : OFFLINE_NOTE;
+}
+
+function ready() {
+  send.disabled = working || pending.some(f => f.data === null);
+}
+
+function renderChips() {
+  chips.replaceChildren(...pending.map((f, i) => {
+    const chip = el("span", "chip");
+    chip.append(document.createTextNode((f.data === null ? "⏳ " : "📎 ") + f.name));
+    chip.append(button("×", "Remove " + f.name, () => { pending.splice(i, 1); renderChips(); }));
+    return chip;
+  }));
+  ready();
+}
+
+function addFiles(list) {
+  for (const file of list) {
+    if (pending.length >= MAX_FILES) { alert("Share up to 3 files at a time."); break; }
+    if (file.size > MAX_BYTES) { alert(file.name + " is over 15 MB."); continue; }
+    const item = { name: file.name || "pasted image.png", type: file.type, data: null };
+    pending.push(item);
+    const reader = new FileReader();
+    reader.onload = () => { item.data = String(reader.result).split(",")[1] || ""; renderChips(); };
+    reader.onerror = () => { pending = pending.filter(f => f !== item); renderChips(); };
+    reader.readAsDataURL(file);
+  }
+  renderChips();
+}
+
+async function submit() {
+  const words = text.value.trim();
+  if ((!words && !pending.length) || working) return;
+  const shared = pending.splice(0); renderChips();
+  const shown = [words, ...shared.map(f => "📎 " + f.name)].filter(Boolean).join("\n");
+  addYou(escapeHtml(shown).replace(/\n/g, "<br>"));
+  text.value = ""; autosize(); working = true; ready();
+  const wait = el("div", "status"); wait.textContent = "Thinking…"; log.append(wait); scroll();
+  let live = null, streamed = "", finished = false;
+  try {
+    const r = await post("/message", { text: words, files: shared.map(f => ({
+      name: f.name, type: f.type, data: f.data })) });
+    if (!r.ok || !r.body) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || "Mentor isn't answering on this Mac right now.");
+    }
+    const reader = r.body.getReader(), decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let cut;
+      while ((cut = buffer.indexOf("\n")) >= 0) {
+        const raw = buffer.slice(0, cut); buffer = buffer.slice(cut + 1);
+        if (!raw.trim()) continue;
+        const event = JSON.parse(raw);
+        if (event.type === "status") { wait.textContent = event.text; }
+        else if (event.type === "token") {
+          if (!live) { live = el("div", "msg mentor live"); log.insertBefore(live, wait); }
+          streamed += event.text; live.textContent = streamed; wait.textContent = "Writing…";
+          scroll();
+        } else if (event.type === "final") {
+          finished = true; if (live) live.remove(); wait.remove();
+          addMentor(event.html, event.text, words);
+        } else if (event.type === "error") {
+          finished = true; if (live) live.remove(); wait.remove();
+          addMentor(escapeHtml(event.text), null, words);
+        }
+      }
+    }
+    if (!finished) throw new Error("The answer was cut off; please ask again.");
+  } catch (e) {
+    if (live) live.remove();
+    addMentor(escapeHtml(e.message || String(e)), null, words);
+  } finally {
+    wait.remove(); working = false; ready(); text.focus();
+  }
+}
+
+function autosize() {
+  text.style.height = "auto"; text.style.height = Math.min(text.scrollHeight, 220) + "px";
+}
+
+$("form").addEventListener("submit", e => { e.preventDefault(); submit(); });
+text.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
+});
+text.addEventListener("input", autosize);
+text.addEventListener("paste", e => {
+  const files = [...(e.clipboardData ? e.clipboardData.files : [])];
+  if (files.length) { e.preventDefault(); addFiles(files); }
+});
+$("attach").addEventListener("click", () => $("picker").click());
+$("picker").addEventListener("change", e => { addFiles(e.target.files); e.target.value = ""; });
+let depth = 0;
+document.addEventListener("dragenter", e => {
+  if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) {
+    depth++; $("drop").classList.add("on");
+  }
+});
+document.addEventListener("dragleave", () => {
+  if (--depth <= 0) { depth = 0; $("drop").classList.remove("on"); }
+});
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => {
+  e.preventDefault(); depth = 0; $("drop").classList.remove("on");
+  if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+async function load() {
+  try {
+    const r = await fetch("/history"), d = await r.json();
+    let question = "";
+    for (const m of d.messages) {
+      if (m.who === "you") { addYou(m.html); question = m.text; }
+      else addMentor(m.html, m.text, question);
+    }
+    status(d.online);
+  } catch (e) { status(true); }
+}
+load();
+</script>
+</body>
+</html>

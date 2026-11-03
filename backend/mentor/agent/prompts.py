@@ -1,7 +1,9 @@
 """Builds Mentor's system prompt from config/persona.md and the charter."""
 
+from collections.abc import Sequence
 from datetime import datetime
 
+from mentor import feedback
 from mentor.agent.models import ModelsConfig, load_models_config
 from mentor.charter import Charter, get_charter, owner_profile_text
 from mentor.settings import Host, get_settings
@@ -34,7 +36,12 @@ HOST_NOTES = {
 
 
 def build_system_prompt(
-    charter: Charter, persona: str, host: Host, model: str, profile: str = ""
+    charter: Charter,
+    persona: str,
+    host: Host,
+    model: str,
+    profile: str = "",
+    lessons: Sequence[str] = (),
 ) -> str:
     """The same text for the whole conversation: the clock goes on each message instead, so the
     prompt stays cacheable and earlier turns stay unchanged."""
@@ -57,7 +64,13 @@ def build_system_prompt(
         if profile
         else ""
     )
-    return f"{body.strip()}\n\n{context}{about}"
+    learned = (
+        f"\n\nLessons from {owner}'s feedback on your answers. Follow them; {owner} can ask "
+        "you to forget one (forget_memory):\n" + "\n".join(f"- {lesson}" for lesson in lessons)
+        if lessons
+        else ""
+    )
+    return f"{body.strip()}\n\n{context}{about}{learned}"
 
 
 def stamp(text: str, sent_at: datetime) -> str:
@@ -70,5 +83,5 @@ def mentor_system_prompt(config: ModelsConfig | None = None) -> str:
     persona = (settings.config_dir / "persona.md").read_text()
     role = (config or load_models_config()).roles["orchestrator"]
     return build_system_prompt(
-        get_charter(), persona, settings.host, role.model, owner_profile_text()
+        get_charter(), persona, settings.host, role.model, owner_profile_text(), feedback.lessons()
     )

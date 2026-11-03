@@ -1,0 +1,11 @@
+# Rebuild without the internet or the container registries (e.g. behind a firewall that
+# intercepts them): the image already on this Mac, with every dependency, plus the new code.
+# Only for code and config changes; a new dependency needs the normal build.
+#   docker build -f infra/Dockerfile.code-update -t mentor:mac .
+#   docker compose -f infra/docker-compose.yml up -d --no-build telegram local
+FROM mentor:mac
+USER root
+RUN rm -rf /app/backend /app/config
+COPY --chown=mentor:mentor backend /app/backend
+COPY --chown=mentor:mentor config /app/config
+USER mentor

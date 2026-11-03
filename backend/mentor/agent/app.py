@@ -19,13 +19,12 @@ def open_agent() -> Iterator[MentorGraph]:
     config = load_models_config()
     role = config.roles["orchestrator"]
     chat_model = get_chat_model("orchestrator", config)
-    system_prompt = mentor_system_prompt(config)
-
     with open_checkpointer() as checkpointer:
         yield build_graph(
             chat_model,
             TOOLS,
-            lambda: system_prompt,
+            # Built for each call, so a lesson from feedback counts from the next answer on.
+            lambda: mentor_system_prompt(config),
             checkpointer,
             # The conversation can move between the Mac (Gemma) and the cloud (Claude).
             plain_text_history=role.provider not in CLAUDE_PROVIDERS,
