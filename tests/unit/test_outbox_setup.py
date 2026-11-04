@@ -90,6 +90,28 @@ def test_a_switched_off_apps_script_api_is_opened_and_waited_for(
     assert [name for name, _ in calls] == ["create", "create", "create"]
 
 
+def test_the_editors_test_deployment_is_never_taken_for_the_web_app() -> None:
+    def deployment(deployment_id: str, version: int | None) -> dict[str, Any]:
+        config = {"scriptId": "S1"} | ({"versionNumber": version} if version else {})
+        url = f"https://script.google.com/macros/s/{deployment_id}/exec"
+        entry = {"entryPointType": "WEB_APP", "webApp": {"url": url}}
+        return {"deploymentId": deployment_id, "deploymentConfig": config, "entryPoints": [entry]}
+
+    def service(*deployments: dict[str, Any]) -> Any:
+        listed = Call({"deployments": list(deployments)})
+        deployments_api = SimpleNamespace(list=lambda scriptId: listed)  # noqa: N803
+        return SimpleNamespace(
+            projects=lambda: SimpleNamespace(deployments=lambda: deployments_api)
+        )
+
+    head = deployment("AKfycbyHEAD", None)  # opens only for the owner, signed in
+    published = deployment("AKfycbzPUBLISHED", 1)
+    assert outbox_setup.web_app(service(head, published), "S1") == (
+        "https://script.google.com/macros/s/AKfycbzPUBLISHED/exec"
+    )
+    assert outbox_setup.web_app(service(head), "S1") is None
+
+
 def test_approval_is_seen_when_the_script_answers(monkeypatch: pytest.MonkeyPatch) -> None:
     answers = iter(
         [

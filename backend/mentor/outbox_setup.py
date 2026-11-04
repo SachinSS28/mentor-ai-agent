@@ -105,9 +105,13 @@ def deploy(service: Any, script_id: str) -> str:
 
 
 def web_app(service: Any, script_id: str) -> str | None:
-    """The address of an existing web app deployment of the script, if there is one."""
+    """The address of an existing web app deployment of the script, if there is one. Google also
+    lists the editor's test deployment (HEAD, no version), which only opens for the owner signed
+    in, so only a deployment of a numbered version counts."""
     found = service.projects().deployments().list(scriptId=script_id).execute()
     for deployment in found.get("deployments", []):
+        if not deployment.get("deploymentConfig", {}).get("versionNumber"):
+            continue
         for entry in deployment.get("entryPoints", []):
             url = str(entry.get("webApp", {}).get("url", ""))
             if entry.get("entryPointType") == "WEB_APP" and url.endswith("/exec"):

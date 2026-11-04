@@ -176,6 +176,26 @@ def test_the_bot_leaves_reminders_to_the_outbox(monkeypatch: pytest.MonkeyPatch)
     told.assert_not_called()
 
 
+def test_a_test_message_survives_the_bots_next_plan_until_sent(world: SimpleNamespace) -> None:
+    connect(world)
+    test = outbox.test_message(NOW)
+    outbox.sync(NOW, [test])
+    outbox.sync(NOW + timedelta(seconds=30))  # the bot's own plan, before the test went out
+    assert test.id in [m["id"] for m in world.fake.requests[-1]["messages"]]
+    world.fake.sent = [test.id]
+    outbox.sync(NOW + timedelta(minutes=2))
+    outbox.sync(NOW + timedelta(minutes=3))
+    assert test.id not in [m["id"] for m in world.fake.requests[-1]["messages"]]
+
+
+def test_an_unsent_test_message_is_given_up_after_half_an_hour(world: SimpleNamespace) -> None:
+    connect(world)
+    test = outbox.test_message(NOW)
+    outbox.sync(NOW, [test])
+    outbox.sync(test.at + outbox.GIVE_UP + timedelta(minutes=1))
+    assert test.id not in [m["id"] for m in world.fake.requests[-1]["messages"]]
+
+
 def test_a_test_message_comes_a_minute_later() -> None:
     message = outbox.test_message(NOW)
     assert message.at == NOW + timedelta(minutes=1) and message.id == f"test-{int(NOW.timestamp())}"

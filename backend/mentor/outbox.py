@@ -39,6 +39,7 @@ log = logging.getLogger(__name__)
 
 SYNCED = "outbox.synced"  # the plan the outbox last accepted: {"at": ..., "messages": {id: text}}
 RECORDED = "outbox.recorded"  # delivered messages already added to the conversation
+ONE_OFF = "outbox.one_off"  # extra messages (the test message), kept in every plan until sent
 REMINDER_DAYS = 7
 MORNING_DELAY = timedelta(minutes=20)  # the morning plan waits this long for the live message
 GIVE_UP = timedelta(minutes=30)  # a reminder the outbox hasn't confirmed by then: the bot sends it
@@ -197,11 +198,15 @@ def sync(
     now: datetime, extra: Sequence[Planned] = (), on_delivered: Callable[[str], None] | None = None
 ) -> bool:
     """Hands the outbox the current plan. Delivered reminders are marked as reminded, and each
-    newly delivered message is passed to on_delivered (to add it to the conversation)."""
+    newly delivered message is passed to on_delivered (to add it to the conversation).
+
+    A plan replaces what the outbox holds, so extra messages handed over earlier and not yet
+    sent go along again, until sent or GIVE_UP past their time."""
     cfg = config()
     if cfg is None:
         return False
-    messages = [*plan(now), *extra]
+    one_off = {m.id: m for m in [*one_offs(), *extra] if now - m.at < GIVE_UP}
+    messages = [*plan(now), *one_off.values()]
     try:
         answer = post(cfg, "plan", messages=[m.payload() for m in messages])
     except OutboxError as error:
@@ -212,7 +217,23 @@ def sync(
     record_delivered(sent, before, now, on_delivered)
     held = {m.id: m.text for m in messages} | {i: t for i, t in before.items() if i in sent}
     set_state(SYNCED, json.dumps({"at": now.isoformat(), "messages": held}))
+    waiting = [
+        {"id": m.id, "at": m.at.isoformat(), "text": m.text}
+        for m in one_off.values()
+        if m.id not in sent
+    ]
+    set_state(ONE_OFF, json.dumps(waiting))
     return True
+
+
+def one_offs() -> list[Planned]:
+    """The extra messages handed over earlier that the outbox hadn't sent yet."""
+    found = json.loads(get_state(ONE_OFF) or "[]")
+    return [
+        Planned(str(m["id"]), datetime.fromisoformat(m["at"]), str(m["text"]))
+        for m in found
+        if isinstance(m, dict)
+    ]
 
 
 def record_delivered(
