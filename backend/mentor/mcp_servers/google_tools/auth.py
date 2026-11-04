@@ -30,8 +30,7 @@ SCOPES = [
 
 SIGN_IN_EXPIRED = (
     "Google sign-in has expired (while the Google app is in Testing mode, Google ends it every "
-    "7 days). Reconnect on the Mac in 30 seconds with: uv run mentor google-auth, then update "
-    "the cloud server with: infra/gcp/deploy.sh google-token"
+    "7 days). Reconnect on the Mac in 30 seconds with: uv run mentor google-auth"
 )
 
 

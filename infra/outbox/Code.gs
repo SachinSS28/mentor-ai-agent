@@ -4,10 +4,11 @@
  * Mac is off. Mentor, when the Mac is on, hands over its plan (`mentor outbox`); a trigger
  * runs `deliver` every minute.
  *
- * Setup (once): paste this file into a new project at script.google.com, then
- * Deploy > New deployment > Web app (Execute as: Me; Who has access: Anyone), and give the web
- * app's address to `mentor outbox --connect`. Mentor then sends the bot's key and a secret of its
- * own; after that, nothing without the secret is accepted.
+ * Setup (once): `mentor outbox --setup` creates and deploys it through the Apps Script API and
+ * opens it once for the owner to approve; by hand: paste this file into a new project at
+ * script.google.com, Deploy > New deployment > Web app (Execute as: Me; Who has access: Anyone),
+ * and give the web app's address to `mentor outbox --connect`. Mentor then sends the bot's key and
+ * a secret of its own; after that, nothing without the secret is accepted.
  *
  * It uses only script properties, a time trigger and requests to api.telegram.org: no access to
  * Drive, Gmail or anything else in the account.
@@ -17,6 +18,13 @@ var PROPS = PropertiesService.getScriptProperties();
 var MAX_MESSAGES = 100; // each is a few KB; script properties hold 500 KB in all
 var KEEP_SENT = 250; // about 6 KB, under the 9 KB limit for one property
 var TOO_OLD_MS = 36 * 3600 * 1000; // a message more than 36 hours late is dropped, not sent
+
+/** Opening the web app's address once, as the owner, is how the script gets approved. */
+function doGet() {
+  return ContentService.createTextOutput(
+    "Mentor's outbox is ready. You can close this tab and go back to Mentor."
+  );
+}
 
 function doPost(e) {
   var lock = LockService.getScriptLock();

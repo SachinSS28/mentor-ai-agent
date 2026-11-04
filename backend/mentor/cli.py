@@ -48,21 +48,27 @@ def preflight() -> None:
         raise SystemExit(problem)
 
 
-def run_outbox(url: str | None, test: bool) -> None:
+def run_outbox(url: str | None, test: bool, setup: bool = False) -> None:
     from datetime import datetime
 
     from mentor import outbox
     from mentor.charter import owner_timezone
 
-    now = datetime.now(owner_timezone())
     try:
-        if url:
+        if setup:
+            from mentor import outbox_setup
+
+            outbox_setup.setup()
+        elif url:
             outbox.connect(url)
-            print("Connected: the outbox has the bot's key and Mentor's secret.")
+        connected = setup or bool(url)
+        if connected:
+            print("Connected: the outbox has the bot's key and Mentor's secret.", flush=True)
         cfg = outbox.config()
         if cfg is None:
-            raise SystemExit("No outbox yet. Deploy infra/outbox/Code.gs, then --connect URL.")
-        extra = [outbox.test_message(now)] if url or test else []
+            raise SystemExit("No outbox yet: run `mentor outbox --setup`.")
+        now = datetime.now(owner_timezone())
+        extra = [outbox.test_message(now)] if connected or test else []
         if not outbox.sync(now, extra):
             raise SystemExit("The outbox didn't take the plan; see the log above.")
         status = outbox.post(cfg, "status")
@@ -101,6 +107,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     outbox = commands.add_parser(
         "outbox", help="the Google outbox: messages that arrive even while the Mac is off"
     )
+    outbox.add_argument(
+        "--setup", action="store_true", help="create the outbox in your Google account (one time)"
+    )
     outbox.add_argument("--connect", metavar="URL", help="connect a newly deployed outbox")
     outbox.add_argument("--test", action="store_true", help="send a test message in a minute")
     linkedin = commands.add_parser(
@@ -119,7 +128,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         return
 
     if args.command == "outbox":
-        run_outbox(args.connect, args.test)
+        run_outbox(args.connect, args.test, args.setup)
         return
 
     if args.command == "awake":
