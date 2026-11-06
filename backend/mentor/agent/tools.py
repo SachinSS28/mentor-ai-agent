@@ -4,16 +4,20 @@ From Phase 1 these move into MCP servers (mentor-core, google-tools) behind Sent
 """
 
 import logging
+import re
 import uuid
 from datetime import UTC, date, datetime, time, timedelta
-from typing import cast, get_args
+from typing import Annotated, Any, cast, get_args
 from zoneinfo import ZoneInfo
 
 import httpx
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool, tool
+from langgraph.prebuilt import InjectedState
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
-from mentor import activity, word
+from mentor import activity, cv, word
 from mentor.agent.models import get_chat_model, load_models_config
 from mentor.briefing import store as briefing_store
 from mentor.charter import get_charter, owner_timezone
@@ -325,11 +329,85 @@ def make_word_document(title: str, content: str) -> str:
     """
     if len(content.strip()) < 20:
         return "Not saved: write the document's full text first, then save it."
+    if CV_TITLE.search(title) and not re.search(r"cover|letter|points", title, re.IGNORECASE):
+        return "Not saved: a CV is made with make_cv, which lays it out properly. Call make_cv."
     try:
         path = word.save(title, content, get_charter().owner.name)
     except OSError as error:
         return f"Not saved: the documents folder can't be written ({error.strerror})."
     return f"Saved the Word file in Documents/Mentor: {word.link(path)}"
+
+
+CV_TITLE = re.compile(r"\b(?:cv|résumé|resume|curriculum vitae)\b", re.IGNORECASE)
+JOB_NUMBER = re.compile(r"[Jj#]?\d+")
+POSTING_CHARS = 300  # a message this long, asking for a CV, carries the job's posting
+
+
+@tool
+def make_cv(
+    state: Annotated[dict[str, Any], InjectedState], job: str = "", version: str = ""
+) -> str:
+    """Make the owner's CV as a formatted Word file, ready to send with an application: the
+    proper layout, built from their master CV. Use it for every CV or résumé request, never
+    make_word_document. For a job, pass job: its J-number (e.g. "J12") or the employer and job
+    title; a job posting in the owner's message is read automatically. Returns the file's link:
+    give it to the owner exactly as written.
+
+    version: only if the owner names one: "energy" (power, renewables, due diligence), "water"
+    (water and environmental engineering) or "academic" (teaching and research).
+    """
+    asked = latest_request(state)
+    details = job_details(job)
+    posting = asked if details or len(asked) > POSTING_CHARS else ""
+    try:
+        made = cv.make(
+            "\n\n".join(t for t in (details, posting) if t),
+            version.strip().lower(),
+            get_chat_model("orchestrator"),
+            hint=asked,
+        )
+    except OSError as error:
+        return f"Not saved: the documents folder can't be written ({error.strerror})."
+    choice = made.choice
+    target = " at ".join(t for t in (choice.role, choice.company) if t)
+    lines = [
+        f"Saved {get_charter().owner.name}'s CV ({made.label} version"
+        f"{f', for {target}' if target else ''}) in Documents/Mentor: {word.link(made.path)}"
+    ]
+    if choice.fit:
+        lines.append(
+            f'Tailored: skill blocks ordered for this job; the profile ends: "{choice.fit}"'
+        )
+    if not made.has_contact:
+        lines.append(
+            "The contact details are missing: they go in ~/.config/mentor/cv_contact.yaml."
+        )
+    lines.append("Worth a read-through before sending; for a PDF, Word's File > Save As > PDF.")
+    return "\n".join(lines)
+
+
+def latest_request(state: dict[str, Any]) -> str:
+    """The owner's message this turn (with any posting they pasted or attached)."""
+    for message in reversed(state.get("messages", [])):
+        if isinstance(message, HumanMessage):
+            return str(message.text)
+    return ""
+
+
+def job_details(job: str) -> str:
+    """A J-number as the job's details from the Job Desk; anything else as written."""
+    job = job.strip()
+    if not JOB_NUMBER.fullmatch(job):
+        return job
+    try:
+        found = store.by_ref(store.parse_ref(job))
+    except (ValueError, SQLAlchemyError):
+        found = None
+    if found is None:
+        return job
+    where = f", {found.location}" if found.location else ""
+    details = [f"{found.title} at {found.company}{where}.", found.fit_reason, found.notes]
+    return " ".join(d for d in details if d)
 
 
 @tool
@@ -882,6 +960,7 @@ TOOLS: list[BaseTool] = [
     update_job,
     check_job_alerts,
     make_word_document,
+    make_cv,
     draft_email,
     find_research,
     find_experts,

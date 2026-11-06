@@ -4,6 +4,7 @@ import re
 from collections.abc import Callable, Iterator, Sequence
 from datetime import datetime
 from typing import Any, cast
+from urllib.parse import unquote
 from uuid import uuid4
 
 from langchain_core.language_models import BaseChatModel
@@ -24,6 +25,7 @@ from langgraph.graph import START, MessagesState, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
+from mentor import word
 from mentor.agent.prompts import stamp
 from mentor.charter import owner_timezone
 
@@ -44,6 +46,7 @@ CHANGING_TOOLS = frozenset(
         "add_calendar_block",
         "draft_email",
         "make_word_document",
+        "make_cv",
         "remember",
         "forget_memory",
         "update_job",
@@ -58,6 +61,15 @@ CLAIMED_ACTION = re.compile(
     r"recorded|blocked|noted)\b",
     re.IGNORECASE,
 )
+# "I've also drafted a cover letter": only a saved Word file or Gmail draft backs that, whatever
+# else changed this turn (making a CV doesn't).
+CLAIMED_LETTER = re.compile(
+    r"\bI(?:'ve|’ve| have)(?: also| now| just)?\s+(?:drafted|written|prepared|saved|created)\s+"
+    r"(?:a |an |the |your )?(?:\w+ ){0,2}(?:cover )?letter",
+    re.IGNORECASE,
+)
+LETTER_TOOLS = frozenset({"make_word_document", "draft_email"})
+FILE_TOOLS = frozenset({"make_word_document", "make_cv"})  # they reply with the saved file's link
 # Things no tool of Mentor's does (it never sends, connects, applies or messages for the owner),
 # so a reply saying it did one is wrong whatever else ran this turn.
 NEVER_DONE = re.compile(
@@ -113,6 +125,19 @@ WORD_NUDGE = (
     "make_word_document now with a short title and the document's text alone (no preamble), "
     "so the owner gets the file."
 )
+# "Prepare my CV for J12", "tailor my resume": the owner wants the formatted CV, made by make_cv.
+CV_REQUEST = re.compile(
+    r"\b(?:cv|c\.v\.|résumé|curriculum vitae)s?\b|\b(?:my|a|the|new)\s+resumes?\b", re.IGNORECASE
+)
+MAKING = re.compile(
+    r"\b(?:make|prepare|create|write|draft|tailor|update|build|generate|redo|format|need|want)",
+    re.IGNORECASE,
+)
+CV_NUDGE = (
+    "Check of your last reply: the owner asked for a CV, but you didn't make one. Call make_cv "
+    "now (job: the J-number, or the employer and job title, if there is one), so the owner gets "
+    "the formatted Word file."
+)
 
 # "The activity journal shows ...", "according to your journal": activity reported as looked up.
 CLAIMED_ACTIVITY = re.compile(
@@ -153,13 +178,15 @@ def this_turn(messages: Sequence[BaseMessage]) -> Sequence[BaseMessage]:
     return messages[turn_starts[-1] if turn_starts else 0 :]
 
 
-def changed_this_turn(messages: Sequence[BaseMessage]) -> bool:
-    """Whether a tool that changes something ran successfully since the owner's last message.
-    Mentor's tools report failures starting with "Not" ("Not added: ..."); a tool that raised
-    is marked as an error."""
+def changed_this_turn(
+    messages: Sequence[BaseMessage], tools: frozenset[str] = CHANGING_TOOLS
+) -> bool:
+    """Whether a tool that changes something (one of `tools`) ran successfully since the owner's
+    last message. Mentor's tools report failures starting with "Not" ("Not added: ..."); a tool
+    that raised is marked as an error."""
     return any(
         isinstance(message, ToolMessage)
-        and message.name in CHANGING_TOOLS
+        and message.name in tools
         and message.status != "error"
         and not message.text.startswith("Not ")
         for message in this_turn(messages)
@@ -191,18 +218,25 @@ def period_asked(question: str) -> str:
     """The my_activity period a question is about."""
     if hours := re.search(r"last (\d+) hours?", question, re.IGNORECASE):
         return f"last {hours.group(1)} hours"
-    for word in ("yesterday", "week"):
-        if word in question.lower():
-            return word
+    for period in ("yesterday", "week"):
+        if period in question.lower():
+            return period
     return "today"
 
 
-def word_file_missing(messages: Sequence[BaseMessage]) -> bool:
-    """Whether the owner asked for a Word file this turn and none was saved."""
+def file_missing(messages: Sequence[BaseMessage], tools: set[str]) -> str | None:
+    """The reminder to send when the owner asked for a CV or a Word file this turn and none was
+    saved; None otherwise."""
     turn = this_turn(messages)
-    asked = bool(turn) and isinstance(turn[0], HumanMessage) and WORD_REQUEST.search(turn[0].text)
-    saved = any(isinstance(m, ToolMessage) and m.name == "make_word_document" for m in turn)
-    return bool(asked) and not saved
+    if not turn or not isinstance(turn[0], HumanMessage):
+        return None
+    asked = turn[0].text
+    saved = {m.name for m in turn if isinstance(m, ToolMessage)}
+    if "make_cv" in tools and CV_REQUEST.search(asked) and MAKING.search(asked):
+        return None if "make_cv" in saved else CV_NUDGE
+    if "make_word_document" in tools and WORD_REQUEST.search(asked):
+        return None if saved & {"make_word_document", "make_cv"} else WORD_NUDGE
+    return None
 
 
 def activity_lookup(messages: Sequence[BaseMessage], reply: BaseMessage | None) -> AIMessage | None:
@@ -221,8 +255,24 @@ def activity_lookup(messages: Sequence[BaseMessage], reply: BaseMessage | None) 
     return AIMessage("", tool_calls=[{**lookup, "id": f"look-{uuid4().hex[:12]}"}])
 
 
+def links_left_out(reply: BaseMessage, messages: Sequence[BaseMessage]) -> list[str]:
+    """Links to files saved this turn that the reply leaves out (small models sometimes name the
+    file instead): without the link, the chat page has nothing to download and Telegram nothing
+    to send."""
+    named = set(word.linked_files(reply.text))
+    return [
+        link.group(0)
+        for message in this_turn(messages)
+        if isinstance(message, ToolMessage) and message.name in FILE_TOOLS
+        for link in word.FILE_LINK.finditer(message.text)
+        if unquote(link.group(2)) not in named
+    ]
+
+
 def claims_unbacked_action(reply: BaseMessage, messages: Sequence[BaseMessage]) -> bool:
     if NEVER_DONE.search(reply.text):
+        return True
+    if CLAIMED_LETTER.search(reply.text) and not changed_this_turn(messages, LETTER_TOOLS):
         return True
     return bool(CLAIMED_ACTION.search(reply.text)) and not changed_this_turn(messages)
 
@@ -238,7 +288,7 @@ def build_graph(
     stored conversation is never changed, so Claude still gets its turns back unmodified."""
     bound = model.bind_tools(tools)
     reads_activity = "my_activity" in {t.name for t in tools}
-    writes_word = "make_word_document" in {t.name for t in tools}
+    writes_files = {t.name for t in tools} & {"make_word_document", "make_cv"}
 
     def agent(state: MessagesState) -> dict[str, list[BaseMessage]]:
         messages = state["messages"]
@@ -253,14 +303,16 @@ def build_graph(
         final = isinstance(reply, AIMessage) and not reply.tool_calls
         if final and reads_activity and (lookup := activity_lookup(messages, reply)):
             return {"messages": [lookup]}  # the made-up description is dropped
-        if final and writes_word and word_file_missing(messages):
+        if final and writes_files and (nudge := file_missing(messages, writes_files)):
             # Small models often paste the document into the reply instead of saving it: ask
-            # once (the request isn't kept) for the tool call that saves what it wrote.
-            saved = bound.invoke([*prompt, AIMessage(reply.text), HumanMessage(WORD_NUDGE)])
+            # once (the request isn't kept) for the tool call that saves it.
+            saved = bound.invoke([*prompt, AIMessage(reply.text), HumanMessage(nudge)])
             if isinstance(saved, AIMessage) and saved.tool_calls:
                 return {"messages": [saved]}
         if final and claims_unbacked_action(reply, messages):
             reply = honest(prompt, reply, messages)
+        if final and (links := links_left_out(reply, messages)):
+            reply = AIMessage(f"{reply.text.rstrip()}\n\n" + "\n".join(links))
         return {"messages": [reply]}
 
     def honest(

@@ -1,0 +1,201 @@
+# Sachin's master CV: the facts every CV Mentor makes is built from (backend/mentor/cv.py).
+# The layout is fixed in code, after Sachin's own CV. For a job, Mentor picks a version, orders
+# the skill blocks and adds one sentence on the fit; every other word comes from this file, so
+# change facts here. **Bold** marks a lead-in. Contact details aren't here (this file is in the
+# code repository): they're in ~/.config/mentor/cv_contact.yaml on the Mac.
+
+name: Sachin Shende
+title: PhD
+default_version: water
+
+versions:
+  energy:
+    label: Energy & power infrastructure
+    about: energy, power, renewables, hydropower, technical due diligence, underwriting, infrastructure investment
+    keywords: [energy, power, renewable, renewables, solar, wind, hydropower, hydroelectric, due diligence, underwriting, investment, investor, data centre, data center, grid, EPC, O&M, asset management, M&A]
+    headline: Senior Energy & Power Infrastructure Specialist | Technical Due Diligence & Underwriting
+    profile_heading: Executive Profile
+    skills_heading: Core Technical & Underwriting Competencies
+    profile:
+      - "Results-oriented Senior Infrastructure & Power Engineer with 12+ years of comprehensive international experience in Technical Due Diligence (TDD), investment underwriting support, energy yield & hydraulic modeling, and capital project execution across mega-scale energy and civil infrastructure assets valued over USD 1 Billion. Holds a PhD in Civil & Environmental Engineering from The Hong Kong Polytechnic University and completed post-doctoral research at HKUST focused on plant-wide energy balance, GHG emissions modeling, and operational decarbonization."
+      - "Proven track record in building '0-to-1' technical underwriting frameworks, conducting rigorous red-flag risk assessments, evaluating EPC/O&M contracts, and translating complex engineering parameters into financial M&A and asset management models. Adept at managing multi-stakeholder engagements with government authorities, EPC contractors, and multilateral financial institutions (ADB, JBIC, EXIM Bank)."
+    skills: [due_diligence, power, toolkit, modeling, contracts, stakeholders]
+    sections: [experience, portfolio, education, credentials]
+    portfolio_heading: Featured Energy & Power Portfolio
+    portfolio_columns: [Project & Location, Capacity / Valuation, Key Technical Leadership Role]
+    portfolio: [punatsangchhu, etalin, arun, purulia, shatin_energy]
+
+  water:
+    label: Water & environmental engineering
+    about: water utilities, water supply, wastewater, groundwater, hydraulics, rivers, environmental engineering, consultancy
+    keywords: [water, wastewater, sewage, drainage, sewerage, groundwater, hydraulic, hydraulics, hydrology, river, flood, utility, utilities, treatment, environmental, EPANET, HEC-RAS, WSD, DSD, EPD, civil engineer]
+    headline: Water & Environmental Engineer | Water Utilities, Wastewater & Hydraulic Modeling
+    profile_heading: Professional Profile
+    skills_heading: Core Technical Competencies
+    profile:
+      - "Civil and environmental engineer with 12+ years of international experience in water utilities, wastewater treatment, groundwater and hydraulic infrastructure across Hong Kong, India, Bhutan and Nepal. Holds a PhD in Civil & Environmental Engineering from The Hong Kong Polytechnic University on the design and cost optimization of drinking water supply systems, and completed post-doctoral research at HKUST on plant-wide energy balance and greenhouse-gas mitigation at Shatin Wastewater Treatment Plant, Hong Kong's largest secondary treatment facility."
+      - "Combines hydraulic and process modeling (EPANET, HEC-RAS, MIKE 11/21C) with hands-on delivery: modular treatment design, site supervision and QA/QC, feasibility studies, detailed project reports and cost estimates, and machine-learning methods integrated with hydraulic models. Experienced in coordinating with government agencies (DSD, WSD, EPD), contractors, joint-venture partners (AECOM) and multilateral funders (ADB, JBIC, EXIM Bank)."
+    skills: [water_networks, wastewater, groundwater, hydraulics, delivery, modeling]
+    sections: [experience, portfolio, research, education, credentials]
+    portfolio_heading: Featured Water & Infrastructure Projects
+    portfolio_columns: [Project & Location, Scale / Funding, Key Technical Role]
+    portfolio: [shatin, kam_tin, north_lantau, docking, punatsangchhu, bhimtal]
+
+  academic:
+    label: Academic & research
+    about: university teaching, lecturer, professor, research, supervision, curriculum, academic appointments
+    keywords: [professor, lecturer, lecturing, teaching, faculty, academic, university, college, research, researcher, postdoctoral, supervision, curriculum, students, PhD, tenure, assistant professor, associate professor]
+    headline: Civil & Environmental Engineering Academic | Integrated Water Management Research
+    profile_heading: Academic Profile
+    skills_heading: Teaching & Research Competencies
+    profile:
+      - "Civil and environmental engineering academic and researcher with a PhD from The Hong Kong Polytechnic University, post-doctoral research at HKUST and 12+ years of international engineering practice. Research spans water distribution optimization, wastewater process modeling and decarbonization, groundwater and riverbank filtration, sustainable coastal infrastructure, and AI-driven hydraulic modeling, with manuscripts under review and in preparation."
+      - "Has taught postgraduate and undergraduate courses at HKUST, The Hong Kong Polytechnic University, University of Wollongong College Hong Kong and Gati Shakti Vishwavidyalaya, and develops curricula as visiting faculty. Committed to research-led teaching, student supervision, externally funded projects and international collaboration in integrated water management."
+    skills: [teaching, research, water_networks, wastewater, groundwater, ai]
+    sections: [teaching, research, publications, experience, education, credentials]
+
+# Two per row on the CV; a version lists six.
+skills:
+  due_diligence:
+    title: Technical Due Diligence & Underwriting
+    text: End-to-end technical risk evaluation, asset feasibility, site inspection protocols, red-flag mitigation, energy yield review frameworks, asset lifecycle analysis.
+  power:
+    title: Power & Renewable Infrastructure
+    text: Hydroelectric power (6200+ MW combined portfolio), Pumped Storage Hydro (PSH), Solar PV integration, civil power structures, utility-scale infrastructure.
+  toolkit:
+    title: Technical Toolkit Development (0-to-1)
+    text: Standardized DD checklists, method statement reviews, performance guarantee verification, BOQ/CAPEX/OPEX cost estimation, equipment specification alignment.
+  modeling:
+    title: Digital Modeling & Simulation
+    text: Python, MATLAB, C++, MIKE Suite (11/21-C), HEC-RAS, EPANET, cloud reporting, business process automation, AI/ML engineering applications.
+  contracts:
+    title: Contract & EPC Oversight
+    text: EPC & O&M contract evaluation, contractor performance audit, grid interconnection review, QA/QC standards, HKIE compliance.
+  stakeholders:
+    title: Multilateral & Stakeholder Relations
+    text: Coordination with international funding bodies (ADB, JBIC, EXIM Bank), government agencies (DSD/WSD/EPD), JV partners (AECOM), and cross-border teams.
+  water_networks:
+    title: Water Distribution & Utilities
+    text: Network design and cost optimization with meta-heuristic and benchmarking algorithms, EPANET hydraulic modeling, smart utility analysis and risk assessment.
+  wastewater:
+    title: Wastewater Treatment & Decarbonization
+    text: Plant-wide process modeling, activated sludge and secondary settlers, energy balance, N2O/CH4 mitigation; compact modular treatment (WetSep) for rural and disaster-prone areas.
+  groundwater:
+    title: Groundwater & Riverbank Filtration
+    text: Pathogen removal and safe pumping-well distance, aquifer management, microplastics and pathogen transport, climate change impacts on groundwater.
+  hydraulics:
+    title: Rivers & Hydraulic Structures
+    text: Spillways, energy dissipation, desilting chambers, sediment transport, flood management and river training; physical (1:70 scale) and HEC-RAS modeling.
+  delivery:
+    title: Project Delivery & QA/QC
+    text: Feasibility studies and detailed project reports, BOQ and cost estimation, tender specifications, construction supervision, contractor coordination and site QA/QC.
+  ai:
+    title: AI & Data-driven Engineering
+    text: Machine learning integrated with hydraulic models, AI-enabled engineering analytics, AI in supply chains and logistics; Python and MATLAB.
+  teaching:
+    title: Teaching & Curriculum Development
+    text: Postgraduate and undergraduate teaching in fluid mechanics, groundwater hydraulics, open channel flow, environmental dynamics and AI & ML in supply chains; curriculum development.
+  research:
+    title: Research & Dissemination
+    text: Papers in Water Supply and ASCE journals, manuscripts under review, talks at SIWW 2024 and the World Tunnel Congress 2024, invited talks at IISc, IIT Madras, Hyderabad and Roorkee.
+
+experience:
+  - role: Technical Consultant
+    organisation: Quick Solutions
+    place: Hong Kong SAR
+    dates: Jan 2026 – Present
+    points:
+      - "**Process Standardization & Operations:** Advises technical clients on standardizing engineering workflows, establishing data pipelines connecting operational engineering metrics to ERP and reporting platforms."
+      - "**Management Reporting & Risk Dashboards:** Formulates executive dashboards (QuickBooks/cloud ERP) providing leadership real-time visibility into capital expenditure, project milestones, supply chain management and AI-based solutions for overloaded infrastructure and operational risk metrics."
+  - role: Application / Project Engineer
+    organisation: Waste & Environmental Technologies Ltd. (The Hong Kong Science and Technology Park)
+    place: Hong Kong SAR
+    dates: Mar 2024 – Mar 2025
+    points:
+      - "**Modular Technical Proposals:** Prepared technical proposals, hydraulic designs, and execution plans for advanced modular water/wastewater treatment systems (WetSep Pure System) targeting Asian markets."
+      - "**Onsite Supervision & QA/QC:** Supervised site setup, mechanical/electrical installations, contractor activities, and site QA/QC checks for projects including Kam Tin Transitional Housing and North Lantau Transfer Station (in JV with AECOM)."
+      - "**Global Forum Presentations:** Presented innovative water and energy-efficient environmental technologies at Singapore International Water Week (SIWW 2024) and the 50th World Tunnel Congress 2024 (Shenzhen)."
+  - role: Postdoctoral Research Fellow
+    organisation: The Hong Kong University of Science and Technology (HKUST)
+    place: Hong Kong SAR
+    dates: Apr 2022 – Apr 2023
+    points:
+      - "**Capital Asset Decarbonization Lead:** Spearheaded plant-wide energy balance and operational optimization modeling for Shatin Wastewater Treatment Plant (Hong Kong's largest secondary facility), achieving operational energy cost reductions and carbon footprint minimization."
+      - "**Predictive Simulation Modeling:** Developed predictive hydraulic and process simulation models for secondary treatment units, authoring actionable operational guidelines and technical reports for facility leadership."
+  - role: Senior Engineer (Project Lead & Technical Manager)
+    organisation: Water and Power Consultancy Services Limited (WAPCOS – Govt. of India Enterprise)
+    place: New Delhi, India
+    dates: Mar 2013 – Sep 2018
+    points:
+      - "**Mega Project Master Planning:** Led Feasibility Study Reports (FSR), Detailed Project Reports (DPR), cost estimation, and master planning for India's largest underground cavern docking facility project (valued at >USD 1 Billion)."
+      - "**Project Controls & Risk Advisory:** Produced detailed tender specifications, quantity estimates, and hydraulic impact studies for high-stakes defense and civil infrastructure."
+      - "**Inter-Agency Governance:** Coordinated project approvals and alignment across government ministries, defense authorities, and specialized engineering research institutes."
+  - role: Research Officer (On Deputation)
+    organisation: Central Water & Power Research Station (CWPRS – High Head Structure Department)
+    place: Pune, India
+    dates: Oct 2011 – Feb 2013
+    points:
+      - "**Hydro Infrastructure Advisory:** Executed 7+ comprehensive physical (1:70 scale) and mathematical (HEC-RAS) simulation studies for mega hydropower projects totaling over 5300 MW, including Punatsangchhu-I & II (2220 MW, Bhutan) and Etalin Hydroelectric (3097 MW, India)."
+      - "**Risk & Structural Optimization:** Evaluated structural stability, energy dissipation systems, desilting chambers, and silt management to mitigate long-term operational risks."
+      - "**Technical Advisory Reports:** Co-authored 3 landmark research reports (Nos. 5078, 5232, 5363) utilized as official engineering baselines for regulatory clearances and multilateral funding approvals."
+  - role: Project Engineer (On Deputation)
+    organisation: Punatsangchhu-I Hydroelectric Project Authority (PHPA)
+    place: Bhutan
+    dates: Jun 2010 – Sep 2011
+    points:
+      - "**Onsite Capital Delivery:** Supervised direct site implementation, engineering design compliance, concrete pours, and quality control for a 1200 MW mega hydropower construction site."
+      - "**Contract Administration:** Managed auxiliary construction contracts, supervised hydro-meteorological networks, and aligned cross-functional contractor teams to ensure milestone adherence."
+  - role: Engineer
+    organisation: WAPCOS Limited
+    place: New Delhi, India
+    dates: Aug 2008 – Jun 2010
+    points:
+      - "**Multilateral Capital Delivery:** Executed detailed engineering designs, DPRs, quantity estimates, and cost analysis for Punatsangchhu-II (1020 MW, Bhutan) and Arun-III (900 MW, Nepal; EXIM Bank funded)."
+      - "**Pumped Storage Construction Review:** Conducted design review and site quality supervision for the JBIC Japan-funded Purulia Pumped Storage Project (900 MW)."
+      - "**ADB Urban Infrastructure:** Designed civil components for the ADB-funded Bhimtal Infrastructure Development Investment Program."
+
+teaching:
+  - "**Professor of Practice (Visiting Faculty), D Y Patil University, India (Aug 2025 – Present):** Project management, design of experiments and environmental science; curriculum development."
+  - "**University of Wollongong College Hong Kong (2024 – 2026):** AI & ML in Supply Chain Management; Navigation and Meteorology."
+  - "**Gati Shakti Vishwavidyalaya, India (2025 – 2026):** Transportation Management."
+  - "**The Hong Kong University of Science and Technology (2022 – 2023):** Environmental Dynamics (postgraduate)."
+  - "**The Hong Kong Polytechnic University (2016 – 2018):** Fluid Mechanics, Groundwater Hydraulics, Open Channel Flow."
+
+research:
+  - "**Groundwater sustainability** under climate change, microplastics and pathogen transport, with the National Institute of Hydrology, Roorkee (manuscript under review)."
+  - "**Chloride-induced deterioration of C-S-H / C-A-S-H** for sustainable coastal infrastructure (submitted to ASCE Journal of Materials in Civil Engineering)."
+  - "**AI-driven frameworks** integrating machine learning with hydraulic modeling (in preparation)."
+  - "**Two-objective water distribution system design** (in preparation)."
+  - "**Integrated modular wastewater treatment** for Kam Tin transitional housing, Hong Kong (ongoing)."
+
+publications:
+  - "**Water Supply (2019):** Design of water distribution systems with a cost-minimization benchmarking algorithm."
+  - "**ASCE Journal of Hazardous, Toxic and Radioactive Waste (2018, 2019):** Riverbank filtration."
+  - "**Technical reports:** CWPRS research reports Nos. 5078, 5232 and 5363 (hydropower model studies)."
+  - "**Contributing author:** Hong Kong Report on the State of Sustainable Built Environment 2024."
+  - "**Conference talks:** Singapore International Water Week 2024 (speaker); 50th World Tunnel Congress 2024, Shenzhen; Cross-Strait Shipping and Logistics Conference 2025."
+  - "**Invited talks:** IISc, IIT Madras, Hyderabad and Roorkee."
+
+# Project rows: [project & location, scale, role]; each version lists the rows it shows.
+portfolio:
+  punatsangchhu: ["Punatsangchhu-I & II Hydroelectric Project (Bhutan)", "2220 MW combined", "3D physical & numerical modeling, power intake & desilting cavern design, site execution and supervision."]
+  etalin: ["Etalin Hydroelectric Project (India)", "3097 MW", "Spillway & energy dissipation hydraulic design, mathematical (CFD) modeling for regulatory clearances."]
+  arun: ["Arun-III Hydroelectric Project (Nepal)", "900 MW (EXIM funded)", "Feasibility study, Detailed Project Report (DPR), quantity & CAPEX cost estimation."]
+  purulia: ["Purulia Pumped Storage Hydro (India)", "900 MW (JBIC funded)", "Technical design review, structural layout checks, and site construction supervision."]
+  shatin_energy: ["Shatin WWTP Energy Optimization (Hong Kong)", "Plant-wide facility", "GHG footprint evaluation, energy balance simulation, and operational cost reduction."]
+  shatin: ["Shatin Wastewater Treatment Plant (Hong Kong)", "Hong Kong's largest secondary treatment plant", "Plant-wide energy balance and process modeling, GHG (N2O/CH4) mitigation, operational guidelines."]
+  kam_tin: ["Kam Tin Transitional Housing (Hong Kong)", "Modular wastewater treatment (WetSep)", "Technical proposal and hydraulic design, site setup and QA/QC supervision."]
+  north_lantau: ["North Lantau Transfer Station (Hong Kong)", "In JV with AECOM", "Supervision of site setup, installations, contractor activities and QA/QC."]
+  docking: ["Underground cavern docking facility (India)", "> USD 1 Billion", "Feasibility study, DPR, cost estimation, master planning and hydraulic impact studies."]
+  bhimtal: ["Bhimtal Infrastructure Development Investment Program (India)", "ADB funded", "Design of civil components."]
+
+education:
+  - "**Ph.D. in Civil & Environmental Engineering (2015 – 2019):** The Hong Kong Polytechnic University, Hong Kong. **Thesis:** 'Design and Optimization of Drinking Water Supply Utility' (Cost Minimization Benchmarking Algorithm). **Supervisor:** Prof. Kwok-wing Chau."
+  - "**M.Tech. in Water Resources Development (2006 – 2008):** Indian Institute of Technology (IIT) Roorkee, India. **Dissertation** on riverbank filtration & pathogen transport modeling."
+  - "**B.E. in Civil Engineering (2001 – 2005):** Government College of Engineering, Amravati University, India."
+
+credentials:
+  - "**Professional Certifications:** Project Planning and Management (University of Virginia, 2025); SDG Indicator 6.4.2 Water Stress (UN FAO eLearning Academy, valid to 2028); Responsible Conduct of Research (CITI Program / HKUST)."
+  - "**Technical Software & Programming:** Python, MATLAB, C++, MIKE Suite (MIKE 11, MIKE 21-C), HEC-RAS, EPANET, AutoCAD, STAAD-Pro, MS Project, QuickBooks, Cloud ERP."
+  - "**Professional Memberships:** The Hong Kong Institution of Engineers (HKIE – membership application in progress); Life Member: IAH, IWRS, ISH; Member: IAHS."
+  - "**Languages:** English (fluent professional proficiency), Hindi (native), Chinese and Nepali (basic conversational)."

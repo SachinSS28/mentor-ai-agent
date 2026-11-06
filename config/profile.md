@@ -1,6 +1,7 @@
 # Sachin's professional profile
 
-From the CV (June 2026 version). Mentor reads this with every message, to know the field, the
+Full name on CVs: Sachin Shende, PhD. From the CVs (June 2026 version, and the energy and
+technical due diligence version of November 2026; the full master CV is config/cv.yaml). Mentor reads this with every message, to know the field, the
 work and the career goals. Contact details, membership numbers and referees are left out on
 purpose: they aren't needed here, and this file is kept in the code repository.
 
@@ -36,6 +37,8 @@ of practice in Hong Kong, India, Bhutan, Nepal and Namibia.
 - Integrated modular wastewater treatment for Kam Tin transitional housing, Hong Kong (ongoing)
 
 ## Career
+- Technical Consultant, Quick Solutions, Hong Kong: Jan 2026-now (standardizing engineering
+  workflows, data pipelines to ERP and reporting, management and risk dashboards)
 - Professor of Practice (visiting faculty), D Y Patil University, Navi Mumbai: Aug 2025-now
   (project management, design of experiments, environmental science; curriculum development)
 - Teaching: University of Wollongong College Hong Kong 2024-26 (AI & ML in supply chain
@@ -67,6 +70,10 @@ construction supervision, quality assurance.
   Shipping and Logistics Conference 2025; invited talks at IISc, IIT Madras, Hyderabad, Roorkee
 - Contributing author, Hong Kong Report on the State of Sustainable Built Environment 2024
 
+## Certifications
+Project Planning and Management (University of Virginia, 2025); SDG Indicator 6.4.2 Water
+Stress (UN FAO eLearning Academy, valid to 2028); Responsible Conduct of Research (CITI / HKUST).
+
 ## Memberships
 IAHS; Indian Association of Hydrologists, Indian Water Resources Society, Indian Society for
 Hydraulics (life member); HKIE membership in progress.
@@ -74,8 +81,10 @@ Hydraulics (life member); HKIE membership in progress.
 ## Career direction
 Research-led teaching, student supervision, externally funded projects and international
 collaboration in integrated water management, and water and environmental engineering roles in
-Hong Kong. This CV version targets the Master programme in Water Technology, Water Reuse and
-Water Management at the Vietnamese-German University (with TU Darmstadt).
+Hong Kong. The June CV targeted the Master programme in Water Technology, Water Reuse and Water
+Management at the Vietnamese-German University (with TU Darmstadt). A second track: senior
+energy and power infrastructure roles (technical due diligence and underwriting of solar, wind
+and hydro assets), drawing on the hydropower portfolio (6200+ MW combined).
 
 ## Path and values
 Theravada Buddhist, training on the Buddha's path (sīla, samādhi, paññā) toward enlightenment

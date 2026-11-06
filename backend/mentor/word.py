@@ -9,6 +9,7 @@ standard library only, so it works offline and needs nothing installed.
 import io
 import re
 import zipfile
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +33,7 @@ INLINE = re.compile(
 )
 NOT_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f]")
 UNSAFE_NAME = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
+QUOTE = {'"': "&quot;"}  # for attribute values
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 REL = "http://schemas.openxmlformats.org/package/2006/relationships"
@@ -190,16 +192,61 @@ def docx(title: str, markdown: str, author: str = "Mentor") -> bytes:
         f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document xmlns:w="{W}">'
         f"<w:body>{''.join(built.parts) or '<w:p/>'}{page}</w:body></w:document>"
     )
-    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     parts = {
+        "word/document.xml": document,
+        "word/styles.xml": STYLES,
+        "word/numbering.xml": numbering(built.numbered),
+    }
+    return package(parts, title, author)
+
+
+@dataclass(frozen=True)
+class Related:
+    """A relationship of the document to another part (a header, a footer) or to a web link."""
+
+    id: str
+    kind: str  # "header", "footer" or "hyperlink"
+    target: str
+    external: bool = False
+
+
+CONTENT_TYPES = {
+    "document": "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
+    "styles": "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
+    "numbering": "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
+    "header": "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
+    "footer": "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
+}
+
+
+def part_kind(name: str) -> str:
+    """'word/header2.xml' -> 'header'."""
+    return re.sub(r"[0-9]+$", "", Path(name).stem)
+
+
+def package(
+    parts: dict[str, str], title: str, author: str, related: Sequence[Related] = ()
+) -> bytes:
+    """A .docx file from its word/ parts (document.xml, styles.xml, numbering.xml, and any
+    headers and footers) plus the package's own: content types, relationships, properties."""
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    overrides = "".join(
+        f'<Override PartName="/{name}" ContentType="{CONTENT_TYPES[part_kind(name)]}"/>'
+        for name in parts
+    )
+    external = ' TargetMode="External"'
+    links = "".join(
+        f'<Relationship Id="{r.id}" Type="{DOC}/{r.kind}" Target="{escape(r.target, QUOTE)}"'
+        f"{external if r.external else ''}/>"
+        for r in related
+    )
+    package_parts = {
         "[Content_Types].xml": (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
             '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'  # noqa: E501
             '<Default Extension="xml" ContentType="application/xml"/>'
-            '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'  # noqa: E501
-            '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'  # noqa: E501
-            '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>'  # noqa: E501
+            f"{overrides}"
             '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'  # noqa: E501
             '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'  # noqa: E501
             "</Types>"
@@ -218,7 +265,7 @@ def docx(title: str, markdown: str, author: str = "Mentor") -> bytes:
             f'<Relationships xmlns="{REL}">'
             f'<Relationship Id="rId1" Type="{DOC}/styles" Target="styles.xml"/>'
             f'<Relationship Id="rId2" Type="{DOC}/numbering" Target="numbering.xml"/>'
-            "</Relationships>"
+            f"{links}</Relationships>"
         ),
         "docProps/core.xml": (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties '
@@ -235,13 +282,10 @@ def docx(title: str, markdown: str, author: str = "Mentor") -> bytes:
             '"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">'
             "<Application>Mentor</Application></Properties>"
         ),
-        "word/document.xml": document,
-        "word/styles.xml": STYLES,
-        "word/numbering.xml": numbering(built.numbered),
     }
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        for name, xml in parts.items():
+        for name, xml in {**package_parts, **parts}.items():
             archive.writestr(name, xml)
     return buffer.getvalue()
 
@@ -253,6 +297,11 @@ def file_name(title: str, today: datetime) -> str:
 
 def save(title: str, markdown: str, author: str = "Mentor") -> Path:
     """Saves the document in the documents folder, never over an existing file."""
+    return save_file(title, docx(title, markdown, author))
+
+
+def save_file(title: str, data: bytes) -> Path:
+    """Saves a finished .docx file in the documents folder, never over an existing file."""
     folder = get_settings().documents_dir
     folder.mkdir(parents=True, exist_ok=True)
     name = file_name(title, datetime.now())
@@ -260,7 +309,7 @@ def save(title: str, markdown: str, author: str = "Mentor") -> Path:
     while path.exists():
         path = folder / name.replace(".docx", f" {n}.docx")
         n += 1
-    path.write_bytes(docx(title, markdown, author))
+    path.write_bytes(data)
     return path
 
 

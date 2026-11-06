@@ -352,6 +352,54 @@ def test_a_requested_word_file_is_saved_not_just_written(system_prompt: Any) -> 
     assert tool_results(graph)[0].startswith("Saved the Word file")
 
 
+@tool
+def make_cv(job: str = "", version: str = "") -> str:
+    """Make the owner's CV."""
+    return "Saved Sachin's CV in Documents/Mentor: [CV.docx](/files/CV.docx)"
+
+
+def test_a_requested_cv_is_made_by_the_cv_tool(system_prompt: Any) -> None:
+    model = scripted(
+        "**Sachin Shende**\nSenior Water Engineer\n\n## Summary\n...",  # written, not made
+        call("make_cv", job="J12"),
+        "Here's your CV for J12: [CV.docx](/files/CV.docx)",
+    )
+    tools = [make_word_document, make_cv]
+    graph = build_graph(model, tools, system_prompt, InMemorySaver())
+    reply = ask(graph, "Please prepare my CV in Word for J12", "t1")
+    assert reply == "Here's your CV for J12: [CV.docx](/files/CV.docx)"
+    assert tool_results(graph) == [
+        "Saved Sachin's CV in Documents/Mentor: [CV.docx](/files/CV.docx)"
+    ]
+
+
+def test_making_a_cv_doesnt_back_a_claimed_cover_letter(system_prompt: Any) -> None:
+    model = scripted(
+        call("make_cv", job="J12"),
+        "Here's your CV: [CV.docx](/files/CV.docx). I have also drafted a tailored cover letter.",
+        "Here's your CV: [CV.docx](/files/CV.docx). Shall I draft a cover letter for J12?",
+    )
+    graph = build_graph(model, [make_word_document, make_cv], system_prompt, InMemorySaver())
+    reply = ask(graph, "Make my CV for J12", "t1")
+    assert (
+        reply == "Here's your CV: [CV.docx](/files/CV.docx). Shall I draft a cover letter for J12?"
+    )
+
+
+def test_a_saved_files_link_is_added_when_the_reply_only_names_it(system_prompt: Any) -> None:
+    model = scripted(call("make_cv", job="J12"), "Your CV is ready: **CV.docx**.")
+    graph = build_graph(model, [make_cv], system_prompt, InMemorySaver())
+    assert ask(graph, "Make my CV for J12", "t1") == (
+        "Your CV is ready: **CV.docx**.\n\n[CV.docx](/files/CV.docx)"
+    )
+
+
+def test_resuming_work_isnt_a_cv_request(system_prompt: Any) -> None:
+    model = scripted("Sure, we'll pick the research up tomorrow.")
+    graph = build_graph(model, [make_word_document, make_cv], system_prompt)
+    assert ask(graph, "I want to resume the research tomorrow", "t1").startswith("Sure")
+
+
 def test_answers_without_a_word_request_are_left_alone(system_prompt: Any) -> None:
     graph = build_graph(scripted("Dear Prof. Lee, thank you."), [make_word_document], system_prompt)
     assert ask(graph, "Draft a thank-you note to Prof. Lee", "t1") == "Dear Prof. Lee, thank you."

@@ -84,6 +84,7 @@ TOOL_LABELS = {
     "update_job": "Updating the job",
     "check_job_alerts": "Reading job alerts",
     "make_word_document": "Writing the Word file",
+    "make_cv": "Making your CV",
     "find_research": "Checking research and news",
     "find_experts": "Finding people",
     "track_contact": "Updating your contacts",

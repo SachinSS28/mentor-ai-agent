@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     documents_dir: Path = Path.home() / "Documents" / "Mentor"
     # The Google outbox's address and Mentor's secret for it (`mentor outbox --connect`).
     outbox_path: Path = PRIVATE_DIR / "outbox.json"
+    # The contact block on the owner's CVs, kept out of the code repository (mentor/cv.py).
+    cv_contact_path: Path = PRIVATE_DIR / "cv_contact.yaml"
     linkedin_token_path: Path = PRIVATE_DIR / "linkedin_gateway_token"
 
 
